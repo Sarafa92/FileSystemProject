@@ -61,7 +61,10 @@
 	
 	// setta il bit all'indice pos con il bit status (0||1) 
 	int BitMap_set(BitMap* bmap, int pos, int status){
-		
+		//casi limite
+		if(pos>bmap->num_bits || status <0 || status > 1 || pos <0){
+				return -1;
+		}
 		return bmap->entries[pos]  = status;
 		
 		}
