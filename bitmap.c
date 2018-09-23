@@ -41,24 +41,26 @@
 	//operazione inversa.. dato il byte e il bit dire quale è il bit nel vettore completo.
 	
 	int BitMap_indexToBlock(int entry, char bit_num, BitMap * bm){
-		
+		int bitCercato;
 				if(entry<0 ||bit_num<0 ){
 					printf("\nErrore entry o bit non validi ");
 					return -1;
 				}
 				
 				if( entry > (bm->num_bits/8)  ){
-					printf("\nErrore entry o bit non validi ");
+					printf("Errore blocco non valido\n\n ");
 					return -1;
 					}
 					
-				/*if( bit_num > ((bm->num_bits)%8)){
-					printf("\nErrore entry o bit non validi\n\n");
+				if( bit_num >= 8){
+					printf("\nErrore bit_num non validi\n\n");
 					return -1;
-					}*/
+					}
 		
-		// il -1 è perchè parto a contare da 0
-			int bitCercato = (((entry) * 8)+ bit_num);
+			
+					
+			 bitCercato = ((((entry) * 8))+ bit_num);
+		 
 		
 		    return bitCercato;
 		}
@@ -114,7 +116,4 @@
 				}
 				return 0;
 		}
-	
 
-		
-	
