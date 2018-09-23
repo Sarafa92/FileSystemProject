@@ -429,6 +429,9 @@ int DiskDriver_flush(DiskDriver* disk){
 			int size = sizeof(DiskHeader)+ dim;
 			//attraverso la funzione msync vado ad aggiornare il file su disco, con le modifiche fatte alla mappa di memoria.
 			int valoreRit = msync(disk->header, size, MS_SYNC);
+			if(valoreRit =-1){
+				handle_error("Impossibile aggiornare il file su disco");
+			}
 		
 		
 		return valoreRit;
