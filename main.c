@@ -16,37 +16,35 @@ typedef struct {
 
 int main(){
 	
-	
+
+// -----------------TEST BITMAP --------------------------
+
+printf("\n\n\n\n---------------------------------TEST BITMAP ------------------------------------------\n");
 printf("inizio\n\n");
+	
 	BitMap* bmap = malloc(sizeof(BitMap));
 	int numBits = bmap->num_bits = 24;
 	bmap->entries =  malloc(sizeof(char) * numBits );
 		
-
-
 	//Inizializzazione tutti i bit sono free
 		for (int i = 0; i < numBits ; i++){
 		bmap->entries[i] = 0;
 	}
 		
-	
 	//----SET----
+	printf("SET\n\n");
 	BitMap_set(bmap,5,1);
 	BitMap_set(bmap,15,1);
 	BitMap_set(bmap,22,1);
 	BitMap_set(bmap,8,1);
 	
 	//---GET---
-	printf("getttt\n\n");
-	
-	
+	printf("GET\n\n");
 	int locazione = BitMap_get(bmap,0,1);
 	int locazione2 = BitMap_get(bmap,6,1);
 	int locazione3 = BitMap_get(bmap,13,1);
 	int locazione4 = BitMap_get(bmap,16,1);
 	int locazione5 = BitMap_get(bmap,6,0);
-	
-
 	
 	printf("\n\n");
 	printf("Deve trovare 5 -----> %d", locazione);
@@ -66,7 +64,7 @@ printf("inizio\n\n");
 	printf("\n\nBlock to index, inserisci un indice\n");
 	scanf("%d", &num);*/
 	
-	int num= 18;
+	 int num= 18;
 	BitMapEntryKey coppia = BitMap_blockToIndex(num,bmap);
 	
 	printf("dato l'indice %d , otteniamo il byte numero: ", num);
@@ -88,12 +86,33 @@ printf("inizio\n\n");
 	printf("%d",trovaloc2);
 	printf("%c",'\n');
 	
-	int trovaloc3 = BitMap_indexToBlock(2,4,bmap);
+	int trovaloc3 = BitMap_indexToBlock(0,7,bmap);
 	
-	printf("Dato il byte 0 e il bit 8 ottengo l'indice numero:  ");
+	printf("Dato il byte 0 e il bit 7 ottengo l'indice numero:  ");
 	printf("%d",trovaloc3);
 	printf("%c",'\n');
+
+
+//-----------------FINE TEST BITMAP -------------------------
+
+
+//------------------TEST DISK_DRIVER-------------------------
+
+printf("\n\n\n\n----------------------------------TEST DISK DIVER --------------------------------\n");
 	
+	
+	DiskDriver* disk = (DiskDriver*)malloc(sizeof(DiskDriver));
+	//disk->header
+	int num_blocks = 8;
+	printf("Ho allocato\n");
+	char* filename = "disk";
+	char* buf[BLOCK_SIZE];
+	printf("ho dato un nome a filename\n");
+	
+
+	printf("verifico init\n\n");
+	DiskDriver_init(disk, filename, num_blocks);
+	printf("ho inizializzato il disco\n");
 
 
 	return 0;
