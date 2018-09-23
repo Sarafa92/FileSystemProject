@@ -80,8 +80,7 @@ void DiskDriver_init(DiskDriver* disk, const char* filename, int num_blocks){
 		  
 		   //verifico che il pathname sia valido, se non è valido significa che il file non esiste, quindi devo crearlo..
 		   //altrimenti esiste e devo solo aprirlo          
-		   //La funzione access() ritorna 0 nel caso che tutti i permessi richiesti siano verificati con successo;
-		   // -1 nel caso che almeno un permesso sia negato.
+		   
 		   
 		 
 		 //-------------FILE ESISTE-----------
