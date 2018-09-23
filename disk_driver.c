@@ -41,6 +41,7 @@ typedef struct {
 #define handle_error(msg) \
            do { perror(msg); exit(EXIT_FAILURE); } while (0)
            
+	
            
            //========================================DISKDRIVER_INIT================================================
            
@@ -56,17 +57,16 @@ void DiskDriver_init(DiskDriver* disk, const char* filename, int num_blocks){
 		
 		//filedescriptor
 		int fd;
+		
 		//Dimensione della bitmap( numero di blocchi del disco/8)
 		
-		//num_blocks è uguale al numero di bit che il BitMap occupa
-		//convert 
 		int dimBitMap = num_blocks/8;
 		
-		int dimDisco = BLOCK_SIZE * num_blocks;
+		//int dimDisco = BLOCK_SIZE * num_blocks;
 		
-		int blocchibitmap = dimDisco/BLOCK_SIZE;
+		//int blocchibitmap = dimDisco/BLOCK_SIZE;
 		
-		int size = sizeof(DiskHeader)+ dimBitMap + dimDisco;
+		int size = sizeof(DiskHeader)+ dimBitMap;
 	
 	
 		
@@ -80,7 +80,8 @@ void DiskDriver_init(DiskDriver* disk, const char* filename, int num_blocks){
 		  
 		   //verifico che il pathname sia valido, se non è valido significa che il file non esiste, quindi devo crearlo..
 		   //altrimenti esiste e devo solo aprirlo          
-		   
+		   //La funzione access() ritorna 0 nel caso che tutti i permessi richiesti siano verificati con successo;
+		   // -1 nel caso che almeno un permesso sia negato.
 		   
 		 
 		 //-------------FILE ESISTE-----------
@@ -134,7 +135,7 @@ void DiskDriver_init(DiskDriver* disk, const char* filename, int num_blocks){
 				//popolo il diskheader
 				DiskHeader* diskHeader = (DiskHeader*) diskH;
 				diskHeader->num_blocks= num_blocks;
-				diskHeader->bitmap_blocks = blocchibitmap;
+				diskHeader->bitmap_blocks = num_blocks;
 				diskHeader->bitmap_entries = dimBitMap;
 				
 				diskHeader->free_blocks = num_blocks;
@@ -417,8 +418,20 @@ int DiskDriver_getFreeBlock(DiskDriver* disk, int start){
 
 // writes the data (flushing the mmaps)
 int DiskDriver_flush(DiskDriver* disk){
+		// controlli
+		if(disk == NULL){
+			handle_error("Impossibile aggiornare i dati il file su disco, parametri non corretti");
+			return -1;
+			}
+			//calcolo la dimensione che devo andare ad aggiornare.
+			int dimBitMap = disk->header->num_blocks;
+			int dim =dimBitMap/8;
+			int size = sizeof(DiskHeader)+ dim;
+			//attraverso la funzione msync vado ad aggiornare il file su disco, con le modifiche fatte alla mappa di memoria.
+			int valoreRit = msync(disk->header, size, MS_SYNC);
 		
-		return 0;
+		
+		return valoreRit;
 	}
 
 	
