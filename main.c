@@ -126,6 +126,17 @@ printf("\n\n\n\n----------------------------------TEST DISK DIVER --------------
 	DiskDriver_init(disk, filename, num_blocks);
 	printf("ho inizializzato il disco\n");
 
-
+		char buffer[BLOCK_SIZE];
+	int i;
+	for (i = 0; i < BLOCK_SIZE ; i++)
+	{
+		buffer[i] = '1';
+	}
+	
+	int write = DiskDriver_writeBlock(disk,buffer,1);
+	if(write ==-1) {
+		printf("errore di scrittura");
+		}
+	
 	return 0;
 }
