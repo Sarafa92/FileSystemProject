@@ -1,33 +1,32 @@
 #include <stdio.h>
-#include "disk_driver.c"
+#include "bitmap.h"
+#include "bitmap.c"
+#include <stdlib.h>
 
+/*typedef struct{
+  int num_bits;
+  char* entries;
+}  BitMap;
 
-int main(int agc, char** argv){
+typedef struct {
+  int entry_num;
+  char bit_num;
+} BitMapEntryKey;
+*/
+
+int main(){
 	
 	
-	/*typedef struct{
-	  int num_bits;
-	  char* entries;
-	}  BitMap;
+printf("inizio\n\n");
+	BitMap* bmap = malloc(sizeof(BitMap));
+	int numBits = bmap->num_bits = 40;
+	int numBytes = numBits/8;
 	
-	typedef struct {
-	  int entry_num;
-	  char bit_num;
-	} BitMapEntryKey;
-	*/
-
-// -----------------TEST BITMAP --------------------------
-
-printf("\n\n\n\n---------------------------------TEST BITMAP ------------------------------------------\n");
-	printf("inizio\n\n");
-		BitMap* bmap = malloc(sizeof(BitMap));
-		int numBits;
-		bmap->num_bits = 24;
-		numBits = bmap->num_bits;
-		bmap->entries =  malloc(sizeof(char) * numBits );
-		
-		int num_blocks_bmap = numBits/8;
-		printf("La mia bitmap ha '%d' blocchi\n\n", num_blocks_bmap);
+	if(numBytes%8 == 1){
+			numBytes+=1;
+		}
+	
+	bmap->entries =  malloc(sizeof(char) * numBytes );
 		
 
 
@@ -36,37 +35,42 @@ printf("\n\n\n\n---------------------------------TEST BITMAP -------------------
 		bmap->entries[i] = 0;
 	}
 		
-	
-	//----SET----
-	printf("SET\n\n");
-	BitMap_set(bmap,5,1);
-	BitMap_set(bmap,15,1);
-	BitMap_set(bmap,22,1);
-	BitMap_set(bmap,8,1);
-	
-	//---GET---
-	printf("GET\n\n");
-	
-	
-	int locazione = BitMap_get(bmap,0,1);
-	int locazione2 = BitMap_get(bmap,6,1);
-	int locazione3 = BitMap_get(bmap,13,1);
-	int locazione4 = BitMap_get(bmap,16,1);
-	int locazione5 = BitMap_get(bmap,6,0);
-	
+	 //---set----//
+ printf("Provo la set\n");
 
-	
-	printf("\n\n");
-	printf("Deve trovare 5 -----> %d", locazione);
-	printf("%c",'\n');
-	printf("Deve trovare 8 -----> %d", locazione2);
-	printf("%c",'\n');
-	printf("Deve trovare 15 -----> %d", locazione3);
-	printf("%c",'\n');
-	printf("Deve trovare 22 -----> %d", locazione4);
-	printf("%c",'\n');
-	printf("Deve trovare 6 -----> %d", locazione5);
-	printf("%c",'\n');
+ BitMap_set(bmap,3,1);
+ BitMap_set(bmap,6,1);
+ BitMap_set(bmap,7,1);
+ BitMap_set(bmap,11,1);
+ BitMap_set(bmap,23,1);
+ BitMap_set(bmap,32,1);
+ BitMap_set(bmap,33,1);
+ BitMap_set(bmap,34,1);
+ BitMap_set(bmap,35,1);
+ BitMap_set(bmap,36,1);
+
+ //---get----//
+
+int a1 =  BitMap_get(bmap,0,0); //deve ritornare 0
+int a2 =  BitMap_get(bmap,0,1); //deve ritornare 3
+int a3 =  BitMap_get(bmap,5,1); //deve ritornare 6
+int a4 =  BitMap_get(bmap,8,1); //deve ritornare 11
+int a5 =  BitMap_get(bmap,16,0);//deve ritornare 16
+int a6 =  BitMap_get(bmap,16,1); // deve ritornare 23
+int a7 =  BitMap_get(bmap,24,1); // deve ritornare 32
+int a8 =  BitMap_get(bmap,33,1); //deve ritronare 33
+int a9 =  BitMap_get(bmap,34,0); //deve ritornare 37
+
+printf("Deve tornare 0 -----> %d\n", a1);
+printf("Deve tornare 3 -----> %d\n", a2);
+printf("Deve tornare 6 -----> %d\n", a3);
+printf("Deve tornare 11 -----> %d\n", a4);
+printf("Deve tornare 16 -----> %d\n", a5);
+printf("Deve tornare 23 -----> %d\n", a6);
+printf("Deve tornare 32 -----> %d\n", a7);
+printf("Deve tornare 33 -----> %d\n", a8);
+printf("Deve tornare 37 -----> %d\n", a9);
+
 	
 	//---BLOCKTOINDEX---
 	printf("---------BLOCK TO INDEX---------\n\n");
@@ -75,7 +79,6 @@ printf("\n\n\n\n---------------------------------TEST BITMAP -------------------
 	scanf("%d", &num);*/
 	
 	int num= 18;
-	
 	BitMapEntryKey coppia = BitMap_blockToIndex(num,bmap);
 	
 	printf("dato l'indice %d , otteniamo il byte numero: ", num);
@@ -97,46 +100,19 @@ printf("\n\n\n\n---------------------------------TEST BITMAP -------------------
 	printf("%d",trovaloc2);
 	printf("%c",'\n');
 	
-	int trovaloc3 = BitMap_indexToBlock(0,7,bmap);
+	int trovaloc3 = BitMap_indexToBlock(2,4,bmap);
 	
-	printf("Dato il byte 0 e il bit 7 ottengo l'indice numero:  ");
+	printf("Dato il byte 2 e il bit 4 ottengo l'indice numero:  ");
 	printf("%d",trovaloc3);
 	printf("%c",'\n');
+	
+
+
 
 
 //-----------------FINE TEST BITMAP -------------------------
 
 
 
-//------------------TEST DISK_DRIVER-------------------------
-
-printf("\n\n\n\n----------------------------------TEST DISK DIVER --------------------------------\n");
-	
-	
-	DiskDriver* disk = (DiskDriver*)malloc(sizeof(DiskDriver));
-	//disk->header
-	int num_blocks = 8;
-	printf("Ho allocato\n");
-	char* filename = "disk";
-	char* buf[BLOCK_SIZE];
-	printf("ho dato un nome a filename\n");
-	
-
-	printf("verifico init\n\n");
-	DiskDriver_init(disk, filename, num_blocks);
-	printf("ho inizializzato il disco\n");
-
-		char buffer[BLOCK_SIZE];
-	int i;
-	for (i = 0; i < BLOCK_SIZE ; i++)
-	{
-		buffer[i] = '1';
-	}
-	
-	int write = DiskDriver_writeBlock(disk,buffer,1);
-	if(write ==-1) {
-		printf("errore di scrittura");
-		}
-	
-	return 0;
+return 0;
 }
