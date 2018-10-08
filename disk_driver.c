@@ -133,7 +133,7 @@ void DiskDriver_init(DiskDriver* disk, const char* filename, int num_blocks){
 				int i;
 				for(i = 0; i < bm.num_bits; i++){
 					BitMapEntryKey key = BitMap_blockToIndex(i,&bm);
-					printf("Entry_num : %d\nBit_num : %d\nStato : %d \n\n", key.entry_num, key.bit_num , ((((bm.entries[key.entry_num]) >> (key.bit_num))&1) ));
+					printf("Entry_num : %d\tBit_num : %d\tStato : %d \n\n", key.entry_num, key.bit_num , ((((bm.entries[key.entry_num]) >> (key.bit_num))&1) ));
     }
 
 				//close(fd)
@@ -262,7 +262,7 @@ int DiskDriver_writeBlock(DiskDriver* disk, void* src, int block_num){
 	int i;
 	for(i = 0; i < bm.num_bits; i++){
 		BitMapEntryKey key = BitMap_blockToIndex(i,&bm);
-		printf("Entry_num : %d\nBit_num : %d\nStato : %d \n\n", key.entry_num, key.bit_num , ((((bm.entries[key.entry_num]) >> (key.bit_num))&1) ));
+		printf("Entry_num : %d\tBit_num : %d\tStato : %d \n\n", key.entry_num, key.bit_num , ((((bm.entries[key.entry_num]) >> (key.bit_num))&1) ));
     }
 	printf("ESCO DALLA WRITE-------------------\n");
 	return 0;
