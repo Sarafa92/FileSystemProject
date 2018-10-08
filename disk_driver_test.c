@@ -11,24 +11,27 @@ int main(){
 	printf("\n\n Sono nel test del disk_driver \n\n");
 
 	DiskDriver* disco = (DiskDriver*)malloc (sizeof(DiskDriver));
+
 	printf("Ho allocato\n\n");
-	char* filename = "prkovddda.txt";
+	char* filename = "prova.txt";
 	printf("provo DiskDriver_init\n\n");
-	DiskDriver_init(disco,filename,4096);
-	printf("fine\n\n");
+	DiskDriver_init(disco,filename,8);
 
-/*	char buffer[BLOCK_SIZE];
 
-	for (int i = 0; i < BLOCK_SIZE; i++){
-		buffer[i] = '1';
+     char*buffer = malloc(sizeof(char)*BLOCK_SIZE);
+    	int i;
+	for ( i = 0; i < BLOCK_SIZE; i++){
+		buffer[i] =1;
 	}
-	int scrivo = DiskDriver_writeBlock(disco,buffer,1);
+    printf("Provo la write---------------------------------------\n\n");
+	int scrivo = DiskDriver_writeBlock(disco,buffer,4);
 	if(scrivo==-1){
-		printf("impossibile scrivere");
+		printf("impossibile scrivere\n\n");
 		}
-	int leggo = DiskDriver_readBlock(disco,buffer,1);
+    printf("Provo la read-------------------------------------\n\n");
+	int leggo = DiskDriver_readBlock(disco,buffer,4);
 	if(leggo==-1){
-		printf("impossibile leggere");
-		}*/
-return 0;
+		printf("impossibile leggere\n\n");
+		}
+        return 0;
 }
