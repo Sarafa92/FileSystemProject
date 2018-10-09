@@ -1,6 +1,8 @@
 
 
 
+
+
 #include <errno.h>
 #include <string.h>
 #include "disk_driver.h"
@@ -48,7 +50,8 @@ void DiskDriver_init(DiskDriver* disk, const char* filename, int num_blocks){
            }
 
         //1 blocco per diskHeader e num blocchi per la bitmap
-		size_t size = (1 + block_per_bitmap)*BLOCK_SIZE;
+        int blocchi_b_h = 1 + block_per_bitmap;
+		size_t size = blocchi_b_h*BLOCK_SIZE;
 		printf("Dimensione della bitmap in byte %d\n\n\n", dimBitMap);
         printf("Quanti blocchi servono per allocare la bitmap %d\n\n\n", block_per_bitmap);
 		printf("size totale %zu\n\n\n", size);
@@ -105,8 +108,8 @@ void DiskDriver_init(DiskDriver* disk, const char* filename, int num_blocks){
 				diskHeader->bitmap_blocks = num_blocks;
 				diskHeader->bitmap_entries = dimBitMap;
 				diskHeader->free_blocks = num_blocks - 1 - block_per_bitmap; //numero dei blocchi - i blocchi allocati per diskheader e bitmap
-				diskHeader->first_free_block = 1 + block_per_bitmap; //parte dal blocco dopo la bitmap
-
+				diskHeader->first_free_block = blocchi_b_h; //parte dal blocco dopo la bitmap
+                diskHeader->blocchi_riservati = blocchi_b_h;
                 printf("TUTTO APPOSTO\n\n\n");
 				//popolo il diskdriver
 				disk->header = (DiskHeader*)diskH;
@@ -118,37 +121,44 @@ void DiskDriver_init(DiskDriver* disk, const char* filename, int num_blocks){
 				printf("bitmap_entries:  %d \n\n",diskHeader->bitmap_entries);
 				printf("free_blocks:  %d \n\n",diskHeader->free_blocks);
 				printf("first_free_block:  %d \n\n",diskHeader->first_free_block);
-
-			        printf("disk_header:  %p \n\n",disk->header);
+                printf("blocchi riservati:  %d \n\n",diskHeader->blocchi_riservati);
+			    printf("disk_header:  %p \n\n",disk->header);
 				printf("bitmap_data:  %p \n\n",disk->bitmap_data);
 
-				//setto a zero tutti i bit della bitmap
-               			// memset(disk->bitmap_data,'0', dimBitMap);
-              			 bzero(disk->bitmap_data,dimBitMap);
-
-				BitMap bm;
+                BitMap bm;
 				bm.entries = disk->bitmap_data;
 				bm.num_bits = disk->header->bitmap_blocks;
 
-				int i;
+                //setto a zero tutti i bit della bitmap, tranne i quello per l'header e quelli per la bitmap
+                //memset(disk->bitmap_data,'0', dimBitMap);
+                bzero(disk->bitmap_data,dimBitMap);
+
+                int i;
+                for (i = 0; i < bm.num_bits ; i++){
+                    if(i<blocchi_b_h){
+                            BitMap_set(&bm,i,1);
+                        }
+                }
+
 				for(i = 0; i < bm.num_bits; i++){
 					BitMapEntryKey key = BitMap_blockToIndex(i,&bm);
 					printf("Entry_num : %d\tBit_num : %d\tStato : %d \n\n", key.entry_num, key.bit_num , ((((bm.entries[key.entry_num]) >> (key.bit_num))&1) ));
+    }
     }
 
 				//close(fd)
 
 			//disk->filed =fd;
-			printf("ESCO DALLA INIT-----------------------\n\n");
-}
+			printf("Esco dalla init\n\n");
+
 }
 	//========================================DISKDRIVER_READ================================================
 
 int DiskDriver_readBlock(DiskDriver* disk, void* dest, int block_num){
-	printf("ENTRO NELLA READ---------------------------------\n");
+	printf("entro nella read\n");
 
 	//controlli
-	if(disk == NULL|| dest == NULL || block_num < 2 || block_num > (disk->header->bitmap_blocks)-1 ){
+	if(disk == NULL|| dest == NULL || block_num < disk->header->blocchi_riservati || block_num > (disk->header->bitmap_blocks)-1 ){
 		printf("Errore, impossibile leggere il blocco poichè i parametri iniziali non sono giusti!\n");
 		return -1;
 	}
@@ -184,7 +194,7 @@ int DiskDriver_readBlock(DiskDriver* disk, void* dest, int block_num){
 
 
 
-		printf("ESCO DALLA READ-----------------------------\n");
+		printf("Esco dalla read\n");
 	return 0;
 
 }
@@ -208,9 +218,9 @@ typedef struct {
 */
 
 int DiskDriver_writeBlock(DiskDriver* disk, void* src, int block_num){
-	printf("ENTRO NELLA WRITE------------------------------\n");
+	printf("entro nella write\n");
 	//controlli
-	if(disk ==NULL|| src ==NULL || block_num < 2 || block_num > (disk->header->bitmap_blocks) -1){
+	if(disk ==NULL|| src ==NULL || block_num < disk->header->blocchi_riservati || block_num > (disk->header->bitmap_blocks) -1){
 		printf("Errore, impossibile scrivere sul blocco poichè i parametri iniziali non sono giusti!\n");
 		return -1;
 	}
@@ -225,8 +235,9 @@ int DiskDriver_writeBlock(DiskDriver* disk, void* src, int block_num){
 
 	BitMapEntryKey chiave = BitMap_blockToIndex(block_num, &bm);
 
-    //devo capire se il blocco su cui voglio scrivere è libero oppure no.
-	if((((bm.entries[chiave.entry_num] >> chiave.bit_num)&1))==1){
+		//devo capire se il blocco su cui voglio scrivere è libero oppure no.
+
+    if((((bm.entries[chiave.entry_num] >> chiave.bit_num)&1))==1){
 		printf("blocco pieno impossibile scrivere\n");
 		return -1;
 	}
@@ -245,7 +256,7 @@ int DiskDriver_writeBlock(DiskDriver* disk, void* src, int block_num){
 		return -1;
 		}
 
-    //quando ho scritto, aggiorno la bitmap ad 1 per segnalare che ho il blocco pieno.
+	   //quando ho scritto aggiorno la bitmap ad 1 per segnalare che ho il blocco pieno.
     int ris = BitMap_set(&bm, block_num, 1);
     if(ris != 0){
         printf("Errore della Bitmap_set\n");
@@ -260,11 +271,12 @@ int DiskDriver_writeBlock(DiskDriver* disk, void* src, int block_num){
 
 
 	int i;
-	for(i = 0; i < bm.num_bits; i++){
-		BitMapEntryKey key = BitMap_blockToIndex(i,&bm);
-		printf("Entry_num : %d\tBit_num : %d\tStato : %d \n\n", key.entry_num, key.bit_num , ((((bm.entries[key.entry_num]) >> (key.bit_num))&1) ));
+				for(i = 0; i < bm.num_bits; i++){
+				BitMapEntryKey key = BitMap_blockToIndex(i,&bm);
+				printf("Entry_num : %d\tBit_num : %d\tStato : %d \n\n", key.entry_num, key.bit_num , ((((bm.entries[key.entry_num]) >> (key.bit_num))&1) ));
+				printf("\n");
     }
-	printf("ESCO DALLA WRITE-------------------\n");
+	printf("esco dalla write\n");
 	return 0;
 }
 //----------------------------------FREE BLOCK---------------------------------------
@@ -324,7 +336,7 @@ int DiskDriver_freeBlock(DiskDriver* disk, int block_num){
         return -1;
     }
 
-for(i = 0; i < bm.num_bits; i++){
+        for(i = 0; i < bm.num_bits; i++){
 					BitMapEntryKey key = BitMap_blockToIndex(i,&bm);
 					printf("Entry_num : %d\tBit_num : %d\tStato : %d \n\n", key.entry_num, key.bit_num , ((((bm.entries[key.entry_num]) >> (key.bit_num))&1) ));
 
@@ -342,6 +354,54 @@ for(i = 0; i < bm.num_bits; i++){
 	return 0;
 
     }
+
+
+	// returns the first free block in the disk from position (checking the bitmap)
+int DiskDriver_getFreeBlock(DiskDriver* disk, int start){
+    printf("SONO NELLA GETFREEBLOCK\n");
+	int bloccoLibero;
+	if(disk == NULL || start < 0 || start > disk->header->bitmap_blocks -1){
+			printf("Impossibile ritornare il primo blocco libero, poichè i parametri non sono corretti");
+			exit(-1);
+		}
+        BitMap bm;
+        bm.entries = disk->bitmap_data;
+        bm.num_bits = disk->header->bitmap_blocks;
+		//prendo attraverso bitmapget, l'indice del primo blocco libero che trovo.
+	    bloccoLibero = BitMap_get(&bm,start,0);
+		if(bloccoLibero == -1){
+            printf("Non ci sono blocchi liberi");
+				return -1;
+			}
+		//aggiorno il puntatore al primo blocco libero
+		disk->header->first_free_block = bloccoLibero;
+
+         printf("ESCO DALLA GETFREEBLOCK\n");
+		return bloccoLibero;
+	}
+
+// writes the data (flushing the mmaps)
+int DiskDriver_flush(DiskDriver* disk){
+		// controlli
+		printf("-----------SONO NELLA FLUSH--------------\n\n");
+		if(disk == NULL){
+			printf("Impossibile aggiornare i dati il file su disco, parametri non corretti\n");
+			return -1;
+			}
+			//calcolo la dimensione che devo andare ad aggiornare
+            printf("blocchi riservati %d\n",disk->header->blocchi_riservati);
+
+            int size = disk->header->blocchi_riservati * BLOCK_SIZE;
+
+			//attraverso la funzione msync vado ad aggiornare il file su disco, con le modifiche fatte alla mappa di memoria.
+		int valoreRit = msync(disk->header, size, MS_SYNC);
+           	if(valoreRit==-1){
+                	printf("Impossibile aggiornare...\n");
+               	        return -1;
+                }
+		return 0;
+	}
+
 
 
 
