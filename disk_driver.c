@@ -267,7 +267,81 @@ int DiskDriver_writeBlock(DiskDriver* disk, void* src, int block_num){
 	printf("ESCO DALLA WRITE-------------------\n");
 	return 0;
 }
+//----------------------------------FREE BLOCK---------------------------------------
+// frees a block in position block_num, and alters the bitmap accordingly
+// returns -1 if operation not possible
+int DiskDriver_freeBlock(DiskDriver* disk, int block_num){
+    printf("SONO NELLA FREE_BLOCK\n\n");
+	if(disk==NULL || block_num < disk->header->blocchi_riservati || block_num > disk->header->bitmap_blocks -1){
+		printf("Errore, impossibile liberare blocco parametri iniziali non sono giusti!\n");
+		return -1;
+	}
 
+	if(disk->header->free_blocks == disk->header->num_blocks){
+		printf("impossibile liberare blocco, sono già tutti liberi");
+		return -1;
+		}
+
+	//char* arrayBit = disk->bitmap_data;
+    BitMap bm;
+    bm.entries = disk->bitmap_data;
+    bm.num_bits = disk->header->bitmap_blocks;
+
+	//trasformo il blocco e devo andare a leggere in due indici di una BitMapEntryKey
+	//individuo cosi il blocco e il bit di block_num
+
+	BitMapEntryKey chiave = BitMap_blockToIndex(block_num,&bm );
+
+    //devo capire se il blocco è già libero oppure no.
+
+    if(((bm.entries[chiave.entry_num] >> chiave.bit_num) & 1)==0){
+		printf("Blocco già libero\n ");
+		return -1;
+	}
+
+		//allineo il fd al blocco che devo liberare
+	int fd = disk->fd;
+	int allineo = lseek(fd,(BLOCK_SIZE*block_num),SEEK_SET);
+	if(allineo ==-1){
+		return -1;
+	}
+        //scrivo tutti 0 nel blocco che vado a liberare
+            char* src = malloc(sizeof(char)*BLOCK_SIZE);
+            int i;
+            for ( i = 0; i < BLOCK_SIZE; i++){
+                src[i] =0;
+            }
+
+		int val = write(disk->fd, src, BLOCK_SIZE);
+		if (val == -1 ){
+			printf("Errore, di scrittura\n");
+			}
+
+	//quando ho liberato il blocco aggiorno la bitmap a 0 per segnalare che ho il blocco vuoto.
+    int ris = BitMap_set(&bm, chiave.bit_num , 0);
+    if(ris != 0){
+        printf("Errore, impossibile aggiornare la bitmap\n");
+        return -1;
+    }
+
+for(i = 0; i < bm.num_bits; i++){
+					BitMapEntryKey key = BitMap_blockToIndex(i,&bm);
+					printf("Entry_num : %d\tBit_num : %d\tStato : %d \n\n", key.entry_num, key.bit_num , ((((bm.entries[key.entry_num]) >> (key.bit_num))&1) ));
+
+    }
+
+
+    //aggiorno il puntatore al primo blocco libero
+    if(disk->header->first_free_block> block_num){
+		disk->header->first_free_block = block_num;
+		}
+
+    //Aggiorno anche il numero dei blocchi liberi
+    disk->header->free_blocks += 1;
+    printf("ESCO DALLA FREE_BLOCK\n\n");
+	return 0;
+
+    }
 
 
 
