@@ -11,10 +11,10 @@ typedef struct {
 
 // converts a block index to an index in the array,
 // and a char that indicates the offset of the bit inside the array
-BitMapEntryKey BitMap_blockToIndex(int num);
+BitMapEntryKey BitMap_blockToIndex(int num,BitMap* bm);
 
 // converts a bit to a linear index
-int BitMap_indexToBlock(int entry, char bit_num);
+int BitMap_indexToBlock(int entry, char bit_num, BitMap* bm);
 
 // returns the index of the first bit having status "status"
 // in the bitmap bmap, and starts looking from position start
