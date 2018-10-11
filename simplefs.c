@@ -1,17 +1,109 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include "simplefs.h"
+
+
+
 
 
 // initializes a file system on an already made disk
 // returns a handle to the top level directory stored in the first block
-DirectoryHandle* SimpleFS_init(SimpleFS* fs, DiskDriver* disk);
+DirectoryHandle* SimpleFS_init(SimpleFS* fs, DiskDriver* disk){
+    printf("ENTRO NELLA INIT\n");
+
+    //controlli
+	if(fs == NULL || disk == NULL){
+		printf("Errore, parametri iniziali\n\n");
+		return NULL;
+		}
+		//creo il directoryHandle, suppongo che un disco ha sempre una directory che inizia dal blocco 0.(root directory)
+		DirectoryHandle* rootDirectory = (DirectoryHandle*)malloc(sizeof(DirectoryHandle));
+
+		//assegno al filesystem il disco già creato
+		fs->disk = disk;
+        fs->blocchi_riservati = disk->header->blocchi_riservati;
+
+		FirstDirectoryBlock* fdb = (FirstDirectoryBlock*)malloc(sizeof(FirstDirectoryBlock));
+
+        //leggo il primo blocco -->firstDirectoryBlock
+		int val = DiskDriver_readBlock(fs->disk, fdb, fs->blocchi_riservati);
+		if(val == -1){
+			free(fdb);
+			printf("Errore di lettura primo blocco\n\n");
+			return NULL;
+			}
+
+		//Riempio il directoryHandle
+		rootDirectory->sfs = fs;
+		rootDirectory->dcb = fdb; //primo blocco della directory
+		rootDirectory->directory = NULL; //genitore della directory ( in questo caso NULL perchè la directory è la radice)
+		//rootDirectory->current_block = ?
+		rootDirectory->pos_in_dir = 0; //posizione zero
+		rootDirectory->pos_in_block = 0;//posizione zero
+
+
+        printf("ESCO DALLA SIMPLE_INIT\n");
+		return rootDirectory;
+
+
+	}
 
 // creates the inital structures, the top level directory
 // has name "/" and its control block is in the first position
 // it also clears the bitmap of occupied blocks on the disk
 // the current_directory_block is cached in the SimpleFS struct
 // and set to the top level directory
-void SimpleFS_format(SimpleFS* fs);
+
+//prende un disco e ci fa la prima directory, poi setta la bitmap tutta a zero ad eccetto blocco della directory che è 1
+//sovrascrivo le info della prima parte.
+void SimpleFS_format(SimpleFS* fs, char* filename, int num_blocks){
+    printf("sono nel formatkkkkk\n");
+	//controlli
+	if(fs == NULL){
+		printf("Errore\n\n");
+        return;
+		}
+
+
+        //inizializzo il disco direttamente qui, quindi setto la bitmap.
+        DiskDriver_init(fs->disk, filename, num_blocks);
+
+        //top level directory
+		FirstDirectoryBlock* fdb = (FirstDirectoryBlock*)malloc(sizeof(FirstDirectoryBlock));
+
+        printf("blocchi riservati: %d\n\n",fs->disk->header->blocchi_riservati);
+		//POPOLO IL FIRST DIRECTORY BLOCK
+
+		//--popolo il BlockHeader
+		fdb->header.previous_block =-1;
+		fdb->header.next_block =-1;
+		fdb->header.block_in_file =0; //posizione del file, se 0 abbiamo il file control block
+
+		//--popolo il FileControBlock
+		fdb->fcb.directory_block =-1;//non ha genitore perchè è la root
+		fdb->fcb.block_in_disk= fs->disk->header->blocchi_riservati;//si trova nel primo blocco del disco dopo i blocchi riservati
+		strcpy(fdb->fcb.name ,"/");
+		fdb->fcb.size_in_bytes = sizeof(FirstDirectoryBlock);
+		fdb->fcb.size_in_blocks = 1;
+		fdb->fcb.is_dir = 1;//directory
+
+		fdb->num_entries = 0;
+
+
+        //scrivo sulla prima directory(root)
+        printf("Scrivo il first directory block nel primo blocco libero\n\n");
+		int val = DiskDriver_writeBlock(fs->disk, (void*)fdb, fs->disk->header->blocchi_riservati);
+		if(val==-1){
+			printf("Errore nella scrittura del primo blocco (FirstDirectoryBlock)\n\n");
+			free(fdb);
+			return;
+			}
+
+    free(fdb);
+    printf("ESCO DALLA FORMAT\n");
+
+  }
 
 // creates an empty file in the directory d
 // returns null on error (file existing, no free blocks)
