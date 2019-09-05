@@ -22,7 +22,7 @@ DirectoryHandle* SimpleFS_init(SimpleFS* fs, DiskDriver* disk){
 
 		//assegno al filesystem il disco già creato
 		fs->disk = disk;
-        fs->blocchi_riservati = disk->header->blocchi_riservati;
+        fs->blocchi_riservati = disk->header->riservati;
 
 		FirstDirectoryBlock* fdb = (FirstDirectoryBlock*)malloc(sizeof(FirstDirectoryBlock));
 
@@ -55,7 +55,7 @@ DirectoryHandle* SimpleFS_init(SimpleFS* fs, DiskDriver* disk){
 // the current_directory_block is cached in the SimpleFS struct
 // and set to the top level directory
 
-//prende un disco e ci fa la prima directory, poi setta la bitmap tutta a zero ad eccetto blocco della directory che è 1
+//prende un disco e ci fa la prima directory, poi setta la bitmap tutta a zero ad eccetto blocco della directory che è 1 (diskHeader e blocchi per l'occupazione di bitmap)
 //sovrascrivo le info della prima parte.
 void SimpleFS_format(SimpleFS* fs, char* filename, int num_blocks){
     printf("sono nel formatkkkkk\n");
@@ -72,17 +72,22 @@ void SimpleFS_format(SimpleFS* fs, char* filename, int num_blocks){
         //top level directory
 		FirstDirectoryBlock* fdb = (FirstDirectoryBlock*)malloc(sizeof(FirstDirectoryBlock));
 
-        printf("blocchi riservati: %d\n\n",fs->disk->header->blocchi_riservati);
+        printf("blocchi riservati: %d\n\n",fs->disk->header->riservati);
+
+        //indice del primo blocco libero ricercandolo a partire dal blocco zero
+        //che sarà il blocco riservato al fcb
+        int firstFreeBlock = DiskDriver_getFreeBlock(fs->disk,0);
+
 		//POPOLO IL FIRST DIRECTORY BLOCK
 
 		//--popolo il BlockHeader
 		fdb->header.previous_block =-1;
 		fdb->header.next_block =-1;
-		fdb->header.block_in_file =0; //posizione del file, se 0 abbiamo il file control block
+		fdb->header.block_in_file =firstFreeBlock; //posizione del file, se 0 abbiamo il file control block
 
 		//--popolo il FileControBlock
 		fdb->fcb.directory_block =-1;//non ha genitore perchè è la root
-		fdb->fcb.block_in_disk= fs->disk->header->blocchi_riservati;//si trova nel primo blocco del disco dopo i blocchi riservati
+		fdb->fcb.block_in_disk= firstFreeBlock;//si trova nel primo blocco del disco dopo i blocchi riservati
 		strcpy(fdb->fcb.name ,"/");
 		fdb->fcb.size_in_bytes = sizeof(FirstDirectoryBlock);
 		fdb->fcb.size_in_blocks = 1;
@@ -90,25 +95,43 @@ void SimpleFS_format(SimpleFS* fs, char* filename, int num_blocks){
 
 		fdb->num_entries = 0;
 
+        //imposto i blocchi del file della dimensione fdb->file_blocks a zero
+        memset(fdb->file_blocks,0,sizeof(fdb->file_blocks));
 
         //scrivo sulla prima directory(root)
         printf("Scrivo il first directory block nel primo blocco libero\n\n");
-		int val = DiskDriver_writeBlock(fs->disk, (void*)fdb, fs->disk->header->blocchi_riservati);
+		int val = DiskDriver_writeBlock(fs->disk, (void*)fdb, firstFreeBlock);
 		if(val==-1){
 			printf("Errore nella scrittura del primo blocco (FirstDirectoryBlock)\n\n");
 			free(fdb);
 			return;
 			}
+        DiskDriver_flush(fs->disk);
 
     free(fdb);
     printf("ESCO DALLA FORMAT\n");
 
   }
-
+//----------------------------------CREATE FILE-------------------------------------------------------
 // creates an empty file in the directory d
 // returns null on error (file existing, no free blocks)
 // an empty file consists only of a block of type FirstBlock
-FileHandle* SimpleFS_createFile(DirectoryHandle* d, const char* filename);
+FileHandle* SimpleFS_createFile(DirectoryHandle* d, const char* filename){
+
+    printf("CREO UN NUOVO FILE\n");
+
+    //controlli parametri
+    if(filename==NULL||d==NULL) {
+    printf("impossibile creare file parametri iniziali non corretti\n!");
+    return NULL;
+    }
+
+    //verifico se non esiste già un file con lo stesso nome, se esiste esci.
+    
+
+
+
+    }
 
 // reads in the (preallocated) blocks array, the name of all files in a directory
 int SimpleFS_readDir(char** names, DirectoryHandle* d);
