@@ -1,7 +1,4 @@
 
-	
-
-
 
 
 
@@ -138,8 +135,8 @@ void DiskDriver_init(DiskDriver* disk, const char* filename, int num_blocks){
 		bm.num_bits = (disk->header->num_blocks)-1;
 
                 //setto a zero tutti i bit della bitmap, tranne quelli per la bitmap
-                memset(disk->bitmap_data,'0', dimBitMap);
-                //bzero(disk->bitmap_data,dimBitMap);
+                //memset(disk->bitmap_data,'0', dimBitMap);
+                bzero(disk->bitmap_data,dimBitMap*8);
 
                 int i;
                 for (i = 0; i < bm.num_bits ; i++){
@@ -166,8 +163,20 @@ int DiskDriver_readBlock(DiskDriver* disk, void* dest, int block_num){
 	printf("entro nella read\n");
 
 	//controlli
-	if(disk == NULL|| dest == NULL || block_num < disk->header->riservati || block_num > (disk->header->bitmap_blocks)-1 ){
-		printf("Errore, impossibile leggere il blocco poichè i parametri iniziali non sono giusti!\n");
+	if(disk == NULL){
+		printf("Errore, impossibile leggere il blocco poichè il riferimento al DISCO è NULLO\n");
+		return -1;
+	}
+		if(dest == NULL  ){
+		printf("Errore, impossibile leggere il blocco poichè il riferimento alla DESTINAZIONE è NULLA\n");
+		return -1;
+	}
+		if( block_num < 0){
+		printf("Errore, impossibile leggere il blocco poichè il numero di blocco scelto è MINORE \n");
+		return -1;
+	}
+		if( block_num > disk->header->num_blocks - disk->header->riservati ){
+		printf("Errore, impossibile leggere il blocco poichè il blocco scelto esce dal range.\n");
 		return -1;
 	}
 
@@ -182,14 +191,13 @@ int DiskDriver_readBlock(DiskDriver* disk, void* dest, int block_num){
 
 	//devo capire se il blocco che voglio leggere è libero oppure no.
 
-
-    if(BitMap_get(&bm,block_num,0)==block_num) {
+	if(BitMap_get(&bm,block_num,0)==block_num) {
         printf("blocco libero impossibile leggere\n");
         return -1;
         }
 
 	//allineo il fd al blocco che devo andare a leggere (header*512 + bitmapdim*512 + 512*blocco da leggere
-	int allineo = lseek(disk->fd, BLOCK_SIZE*block_num ,SEEK_SET);
+	int allineo = lseek(disk->fd, BLOCK_SIZE*block_num +BLOCK_SIZE ,SEEK_SET);
 	if(allineo ==-1){
 		return -1;
 	}
@@ -201,7 +209,11 @@ int DiskDriver_readBlock(DiskDriver* disk, void* dest, int block_num){
 		printf("Errore nella lettura\n");
 		return -1;
 		}
-
+    int i;
+		for(i = 0; i < bm.num_bits; i++){
+					BitMapEntryKey key = BitMap_blockToIndex(i,&bm);
+					printf("Entry_num : %d\tBit_num : %d\tStato : %d \n\n", key.entry_num, key.bit_num , ((((bm.entries[key.entry_num]) >> (key.bit_num))&1) ));
+				}
 
 
 		printf("Esco dalla read\n");
@@ -230,10 +242,24 @@ typedef struct {
 int DiskDriver_writeBlock(DiskDriver* disk, void* src, int block_num){
 	printf("entro nella write\n");
 	//controlli
-	if(disk ==NULL|| src ==NULL || block_num < disk->header->riservati || block_num > (disk->header->bitmap_blocks) -1){
-		printf("Errore, impossibile scrivere sul blocco poichè i parametri iniziali non sono giusti!\n");
+	if(disk ==NULL){
+		printf("Errore, impossibile scrivere sul blocco poichè il riferimento al DISCO è NULLO\n");
 		return -1;
 	}
+	if( src ==NULL){
+		printf("Errore, impossibile scrivere sul blocco poichè il riferimento alla SORGENTE è NULLA\n");
+		return -1;
+	}
+		if( block_num < 0){
+		printf("Errore, impossibile scrivere sul blocco poichè il blocco scelto è INFERIORE al range!\n");
+		return -1;
+	}
+		if(block_num > (disk->header->num_blocks - disk->header->riservati)){
+		printf("Errore, impossibile scrivere sul blocco poichè il blocco scelto è SUPERIORE al range!\n");
+		return -1;
+	}
+
+
 	//char* arrayBit = disk->bitmap_data;
 
 	BitMap bm;
@@ -254,7 +280,7 @@ int DiskDriver_writeBlock(DiskDriver* disk, void* src, int block_num){
 
 	//allineo il fd al blocco su cui devo andare a scrivere
 
-	int allineo = lseek(disk->fd,block_num*BLOCK_SIZE,SEEK_SET);
+	int allineo = lseek(disk->fd,BLOCK_SIZE+  block_num*BLOCK_SIZE ,SEEK_SET);
 	if(allineo ==-1){
 		return -1;
 	}
@@ -414,8 +440,6 @@ int DiskDriver_flush(DiskDriver* disk){
                 }
 		return 0;
 	}
-
-
 
 
 
