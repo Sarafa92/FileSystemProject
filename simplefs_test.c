@@ -1,7 +1,6 @@
-#include "simplefs.h"
-#include "bitmap.h"
-#include "disk_driver.h"
 
+
+#include "simplefs.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -17,7 +16,7 @@ int main(int argc, char *argv[]) {
     SimpleFS* sfs =(SimpleFS*)malloc(sizeof(SimpleFS));
     printf("sfs %ld\n", sizeof(sfs));
     //alloco lo spazio necessario al diskDriver
-    DiskDriver* disco = (DiskDriver*) malloc(sizeof(DiskDriver));
+    DiskDriver* disco = (DiskDriver*)malloc(sizeof(DiskDriver));
     printf("disco %ld\n", sizeof(disco));
 
     //numero blocchi del disco da input
@@ -26,22 +25,23 @@ int main(int argc, char *argv[]) {
     scanf("%d", &num_blocchi_disco);
 
     //nome disco da input
-    char  filename [40];
+     char filename[40];
     printf("Inserisci nome da assegnare al disco");
     scanf("%s", filename);
 
     //inizializzo DISK DRIVER
-   DiskDriver_init(disco,filename,num_blocchi_disco);
+	DiskDriver_init(disco,filename,num_blocchi_disco);
+	
+	//SimpleFS_format(sfs);
+   SimpleFS_init(sfs,disco);
+   
 
-    SimpleFS_init(sfs,disco);
+	char buff[40] = "ciao";
 
-char buff[40] = "ciao";
-
-DiskDriver_writeBlock(disco,buff,5);
+	DiskDriver_writeBlock(disco,buff,5);
 
 
 
 
     return 0;
 }
-
