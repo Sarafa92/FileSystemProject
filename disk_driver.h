@@ -10,7 +10,7 @@ typedef struct {
 
   int free_blocks;     // free blocks
   int first_free_block;// first block index
-  int blocchi_riservati; //blocchi riservati per l'allocazione dell'header e della bitmap.
+  int riservati; //blocchi riservati per l'allocazione dell'header e della bitmap.
 
 } DiskHeader;
 
