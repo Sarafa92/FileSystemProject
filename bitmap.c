@@ -1,5 +1,5 @@
-	#include <stdio.h>
 	#include "bitmap.h"
+	#include <stdio.h>
 	#include <stdlib.h>
 	
 	/*typedef struct{
@@ -116,4 +116,3 @@
 				}
 				return 0;
 		}
-
