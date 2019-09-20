@@ -1,9 +1,10 @@
+#include "disk_driver.h"
+
 #include <stdio.h>
 #include <stdlib.h>
-#include "bitmap.c"
 #include <fcntl.h>
 
-#include "disk_driver.c"
+
 
 int main(){
 
