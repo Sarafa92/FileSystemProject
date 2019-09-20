@@ -65,6 +65,7 @@ typedef struct {
   
 typedef struct {
   DiskDriver* disk;
+  int blocchi_riservati;
   // add more fields if needed
 } SimpleFS;
 
@@ -144,5 +145,6 @@ int SimpleFS_mkDir(DirectoryHandle* d, char* dirname);
 int SimpleFS_remove(SimpleFS* fs, char* filename);
 
 
+int verificoFile(DirectoryHandle* d, const char* filename);
   
 
