@@ -11,25 +11,37 @@ int main(int argc, char *argv[]) {
   printf("FirstDirectoryBlock size %ld\n", sizeof(FirstDirectoryBlock));
   printf("DirectoryBlock size %ld\n", sizeof(DirectoryBlock));
 
-    printf("\n\n\n\n\n");
 
-  //alloco filesystem
-    SimpleFS* sfs = (SimpleFS*) malloc(sizeof(SimpleFS));
+
+    //alloco lo spazio necessario al filesystem
+    SimpleFS* sfs =(SimpleFS*)malloc(sizeof(SimpleFS));
     printf("sfs %ld\n", sizeof(sfs));
-    //alloco diskDriver
+    //alloco lo spazio necessario al diskDriver
     DiskDriver* disco = (DiskDriver*) malloc(sizeof(DiskDriver));
     printf("disco %ld\n", sizeof(disco));
-    sfs->disk = disco;
-    printf("provo simpHHHHHHHHHHHHHHHHHHHHHHHHHle_format\n");
 
-    //----------------provo la simpleFS format --------------------------
-    SimpleFS_format(sfs,"provae.txt",8);
+    //numero blocchi del disco da input
+    int num_blocchi_disco;
+    printf("Inserire numero di blocchi che si vuole allocare per il DiskDriver : ");
+    scanf("%d", &num_blocchi_disco);
 
-    printf("provo la simpleFs_init\n");
-    //---------------provo la simpleFS init -----------------------------
-    SimpleFS_init(sfs,sfs->disk);
+    //nome disco da input
+    char  filename [40];
+    printf("Inserisci nome da assegnare al disco");
+    scanf("%s", filename);
+
+    //inizializzo DISK DRIVER
+   DiskDriver_init(disco,filename,num_blocchi_disco);
+
+    SimpleFS_init(sfs,disco);
+
+char buff[40] = "ciao";
+
+DiskDriver_writeBlock(disco,buff,5);
+
 
 
 
     return 0;
 }
+
