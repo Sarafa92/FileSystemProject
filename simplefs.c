@@ -437,16 +437,175 @@ FileHandle* SimpleFS_createFile(DirectoryHandle* d, const char* filename){
 	}
 
 
+//A partire dalla directoryhandle data, vado nella diretory corrispondente e inizio a scorrere la lista di fle contenuti e li inserisco nella lista names
+//devo preallocare names,del numero di entries che ho
 // reads in the (preallocated) blocks array, the name of all files in a directory
-int SimpleFS_readDir(char** names, DirectoryHandle* d);
-
+int SimpleFS_readDir(char** names, DirectoryHandle* d){
+	printf("*************************READ_DIR************************\n\n");
+	
+	//controlli
+	if(names==NULL){
+		printf("Errore impossibile leggere la directory poichè il riferimento a names è NULLO\n\n");
+		 return -1;
+	}
+	if(d == NULL) {
+		printf("Errore impossibile leggere la directory poichè il riferimento al DirectoryHandle è NULLO\n\n");
+		return -1;
+	}
+	
+	//Se num entries è pari a zero significa che non ci sono elementi da leggere
+	if(d->dcb->num_entries==0){
+		printf("Non ci sono elementi da leggere\n\n");
+		return -1;
+		}
+		
+	int i, val;
+	int j; //lo uso per tenere conto dell'indice di fine primo blocco
+	//prealloco names 
+	names = malloc((d->dcb->num_entries)*sizeof(d->dcb->fcb.name));
+	
+	//scorro il fileblocks della prima directory
+	FirstFileBlock* firstFileBlock =  malloc(sizeof(FirstFileBlock));
+	for (i = 0; (i < d->dcb->num_entries) && (i < sizeof(d->dcb->file_blocks)); i++){
+		val = DiskDriver_readBlock(d->sfs->disk,firstFileBlock, d->dcb->file_blocks[i]);
+		if(val==-1){
+			printf("Lettura nomi file non riuscita\n\n");
+			free(firstFileBlock);
+			return -1;
+			}
+			names[i] = firstFileBlock->fcb.name;
+			j=i;
+	}
+	
+	//scorro il fileblocks delle directory successive e inserisco i nomi nell'array names
+	DirectoryBlock* db =  malloc(sizeof(DirectoryBlock));
+	int next_block = d->dcb->header.next_block;
+	
+	while(next_block!=-1){
+		val = DiskDriver_readBlock(d->sfs->disk,db,next_block);
+		if(val==-1){
+			printf("Impossibile leggere blocchi successivi\n\n");
+			free(db);
+			free(firstFileBlock);
+			return -1;
+			}
+		for (i = j; i<(d->dcb->num_entries) && i < sizeof(db->file_blocks); i++){
+			val = DiskDriver_readBlock(d->sfs->disk,firstFileBlock, db->file_blocks[i]);
+			if(val==-1){
+				printf("Lettura nomi file non riuscita\n\n");
+				free(db);
+				free(firstFileBlock);
+				return -1;
+			}
+			names[i] = firstFileBlock->fcb.name;
+			j=i;//aggiorno l'indice da dove devo riprende nell'array names
+		}
+		next_block= db->header.next_block;
+	}
+	
+	printf("*******************************FINE READ DIR************************************\n\n");
+	return 0;
+}
 
 // opens a file in the  directory d. The file should be exisiting
-FileHandle* SimpleFS_openFile(DirectoryHandle* d, const char* filename);
+FileHandle* SimpleFS_openFile(DirectoryHandle* d, const char* filename){
+
+	printf("*******************************OPEN_FILE************************************\n\n");
+
+	//controlli
+	if(d==NULL){
+	printf("Impossibile aprire file riferimento a directoryHandle NULLO\n\n\n");
+		 return NULL;
+	}
+	if(filename==NULL){
+		printf("Impossibile aprire file riferimento a filename NULLO\n\n\n");
+		 return NULL;
+	}
+	//creo filehandle da ritornare come puntatore al file che apro
+	FileHandle* fh = malloc(sizeof(FileHandle));
+	
+	FirstFileBlock* ffb = malloc(sizeof(FirstFileBlock));
+	
+	//scorro il fileblocks 
+	int i,val;
+	for (i = 0; i < d->dcb->num_entries && i<sizeof(d->dcb->file_blocks); i++){
+		val = DiskDriver_readBlock(d->sfs->disk, ffb, d->dcb->file_blocks[i]);
+		if(val==-1){
+			printf("Lettura nomi file non riuscita\n\n");
+			free(ffb);
+			return NULL;
+			}
+			
+	//se il nome è lo stesso ed è un file allora popolo il fileheader
+		if(strcmp(ffb->fcb.name, filename) == 0 && ffb->fcb.is_dir == 0){
+			//popolo fileHeader
+			fh->sfs = d->sfs;
+			fh->fcb = ffb;
+			fh->directory = d->dcb;
+			fh->current_block = &(ffb->header);
+			fh->pos_in_file = 0;
+
+			// Restituisco il file handle
+			return fh;
+		}
+	}
+	//se non sta nella prima directory controllo le directory successive
+	
+	DirectoryBlock* db = malloc(sizeof(DirectoryBlock));
+	int next_block = d->dcb->header.next_block;
+	
+	//leggo la prossima directory finchè ce ne sono
+	while(next_block!=-1){
+		val = DiskDriver_readBlock(d->sfs->disk,db,next_block);
+		if(val==-1){
+			printf("Impossibile leggere blocchi successivi\n\n");
+			free(db);
+			free(ffb);
+			return NULL;
+		}
+			//scorro il fileblock
+		for (i = 0; i<(d->dcb->num_entries) && i < sizeof(db->file_blocks); i++){
+			val = DiskDriver_readBlock(d->sfs->disk,ffb, db->file_blocks[i]);
+			if(val==-1){
+				printf("Lettura nomi file non riuscita\n\n");
+				free(db);
+				free(ffb);
+				return NULL;
+			}
+			//se il nome è uguale ed è un file popolo il file header
+			if(strcmp(ffb->fcb.name, filename) == 0 && ffb->fcb.is_dir == 0){
+			//popolo il fileheader
+			fh->sfs = d->sfs;
+			fh->fcb = ffb;
+			fh->directory = d->dcb;
+			fh->current_block = &(ffb->header);
+			fh->pos_in_file = 0;
+
+			// Restituisco il file handle
+			return fh;
+			}
+		}
+	}	
+	printf("*******************************FINE OPEN_FILE************************************\n\n");
+	//se non lo trovo, allora ritorna riferimento nullo
+	printf("File da aprire non trovato\n\n");
+	return NULL;
+}
 
 
 // closes a file handle (destroyes it)
-int SimpleFS_close(FileHandle* f);
+int SimpleFS_close(FileHandle* f){
+	printf("****************************CLOSE*************************\n\n");
+	if(f==NULL){
+		printf("Riferimento a fileHandle NULL, IMPOSSIBILE DISTRUGGERE FILEHANDLE\n\n");
+		return  -1;
+	}
+	//libero il file handle
+	free(f);
+	printf("****************************FINE CLOSE*************************\n\n");
+	return 0;
+}
+
 
 // writes in the file, at current position for size bytes stored in data
 // overwriting and allocating new space if necessary
