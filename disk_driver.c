@@ -1,3 +1,4 @@
+
 #include "disk_driver.h"
 
 #include <stdio.h>
@@ -169,7 +170,7 @@ int DiskDriver_readBlock(DiskDriver* disk, void* dest, int block_num){
 		printf("Errore, impossibile leggere il blocco poichè il numero di blocco scelto è MINORE \n");
 		return -1;
 	}
-		if( block_num > disk->header->num_blocks - disk->header->riservati ){
+		if( block_num > disk->header->num_blocks){
 		printf("Errore, impossibile leggere il blocco poichè il blocco scelto esce dal range.\n");
 		return -1;
 	}
@@ -248,7 +249,7 @@ int DiskDriver_writeBlock(DiskDriver* disk, void* src, int block_num){
 		printf("Errore, impossibile scrivere sul blocco poichè il blocco scelto è INFERIORE al range!\n");
 		return -1;
 	}
-		if(block_num > (disk->header->num_blocks - disk->header->riservati)){
+		if(block_num > (disk->header->num_blocks)){
 		printf("Errore, impossibile scrivere sul blocco poichè il blocco scelto è SUPERIORE al range!\n");
 		return -1;
 	}
@@ -314,7 +315,7 @@ int DiskDriver_writeBlock(DiskDriver* disk, void* src, int block_num){
 // returns -1 if operation not possible
 int DiskDriver_freeBlock(DiskDriver* disk, int block_num){
     printf("SONO NELLA FREE_BLOCK\n\n");
-	if(disk==NULL || block_num < disk->header->riservati || block_num > disk->header->bitmap_blocks -1){
+	if(disk==NULL || block_num < 0|| block_num > disk->header->bitmap_blocks -1){
 		printf("Errore, impossibile liberare blocco parametri iniziali non sono giusti!\n");
 		return -1;
 	}
@@ -434,6 +435,10 @@ int DiskDriver_flush(DiskDriver* disk){
                 }
 		return 0;
 	}
+
+
+
+
 
 
 
