@@ -610,7 +610,209 @@ int SimpleFS_close(FileHandle* f){
 // writes in the file, at current position for size bytes stored in data
 // overwriting and allocating new space if necessary
 // returns the number of bytes written
-int SimpleFS_write(FileHandle* f, void* data, int size);
+int SimpleFS_write(FileHandle* f, void* data, int size){
+	printf("***************************************************WRITE***********************************************\n\n\n");
+	
+	//controlli
+	if(f==NULL){
+		printf("Impossibile scrivere nel file, riferimento a FileHandle NULLO\n\n");
+		return -1;
+	}
+	if(data==NULL){
+		printf("Impossibile scrivere nel file, riferimento a data NULLO\n\n");
+		return -1;
+	}
+	if(size<1){
+		printf("Impossibile scrivere nel file, dimensione di data non specificata\n\n");
+		return -1;
+	}
+	
+	int next_block; //per identificare il blocco successivo da andare a scrivere 
+	int bloccoCorrente; //mi indica in che blocco del disco mi trovo
+	int bytes_scritti=0; //da ritornare
+	int bytes_daScrivere=0; //mi tengono contro del numero di bytes da scrivere ancora 
+	int val;
+	int bloccoLibero;
+	
+	FirstFileBlock* ffb = malloc(sizeof(FirstFileBlock));
+	
+	
+	//controllo se la dimensione dei dati contenuti nel ffb - la posizione in cui mi trovo è minore della dimensione(size) dei bytes da scrivere
+	//allora posso scriverli completamente del FFB, scrivo tutti i dati in ffb
+	
+	if((sizeof(f->fcb->data) - f->pos_in_file ) <= size){
+		val = DiskDriver_readBlock(f->sfs->disk,ffb,f->fcb->fcb.block_in_disk);
+		if(val==-1){
+			printf("Impossibile leggere il ffb\n\n");
+			free(ffb);
+			return -1; 
+		}
+		
+		//altrimenti la lettura del blocco è andata bene quindi scrivo
+		memcpy(f->fcb->data + f->pos_in_file,data,strlen(data));
+		val = DiskDriver_writeBlock(f->sfs->disk,ffb, f->fcb->fcb.block_in_disk);
+		if(val==-1){
+			printf("Impossibile scrivere nel ffb\n\n");
+			free(ffb);
+			return -1;
+		}
+		bytes_scritti = strlen(data);
+		
+		//aggiorno valori delle dimensioni nel File Control Block
+		f->fcb->fcb.size_in_bytes = f->pos_in_file + strlen(data);
+		f->fcb->fcb.size_in_blocks =1;
+		
+		//aggiorno posizione nel file
+		f->pos_in_file = f->pos_in_file + size;
+		
+	} // la dimensione dei dati non rientra nel ffb, bisogna scrivere anche in altri blocchi----------------
+		
+			
+			//leggo il ffb
+					val = DiskDriver_readBlock(f->sfs->disk,ffb,f->fcb->fcb.block_in_disk);
+					if(val==-1){
+					printf("Impossibile leggere il ffb\n\n");
+					free(ffb);
+					return -1; 
+				}
+				
+		//vedo la differenza di blocchi che posso scrivere nel primo FirstFileBlock
+		int differenzaffb = sizeof(f->fcb->data) - f->pos_in_file;
+		
+		//se c'è qualche blocco libero nel FirstFileBlock
+		if(differenzaffb > 0){
+				//mi salvo in una variabile i restanti bytes da scrivere negli altri blocchi
+				bytes_daScrivere = size - differenzaffb;
+			
+				// scrivo i blocchi che mi entrano nel primo blocco 
+				memcpy(f->fcb->data + f->pos_in_file,data,differenzaffb);
+				val = DiskDriver_writeBlock(f->sfs->disk,ffb, f->fcb->fcb.block_in_disk);
+				if(val==-1){
+					printf("Impossibile scrivere nel ffb\n\n");
+					free(ffb);
+					return -1;
+				}	
+				bytes_scritti = differenzaffb;
+				f->pos_in_file = f->pos_in_file+differenzaffb;
+		}
+			if(differenzaffb <0 ){
+			printf("ERRORE SCRITTURA, DIFFERENZA NEGATIVA\n\n");
+			exit(-1);
+			}
+		
+		
+	//VALE PER I BLOCCHI SUCCESSIVI AL FIRST
+					next_block = ffb->header.next_block;
+		
+					//finchè il prossimo blocco è diverso da -1  e bytes da scrivere sono > 0 vado a scrivere nel prossimo blocco i bytes restanti
+					while((next_block == -1 )&&( bytes_daScrivere>0)){
+						
+						FileBlock* fb = malloc(sizeof(FileBlock));
+						
+						//aggiorno il puntatore al bloccoCorrente
+						bloccoCorrente = next_block;
+						
+						//leggo il blocco successivo 
+						val = DiskDriver_readBlock(f->sfs->disk,fb, bloccoCorrente);
+						if(val == -1){
+							printf("Impossibile leggere dal fb\n\n");
+							free(ffb);
+							free(fb);
+							return -1;
+							}
+						
+						
+						//se ci entrano tutti li scrivo tutti nel blocco
+						if((sizeof(fb->data) <= bytes_daScrivere)){
+							
+							memcpy(fb->data,data + bytes_scritti,bytes_daScrivere);
+								val = DiskDriver_writeBlock(f->sfs->disk,fb, bloccoCorrente);
+								if(val==-1){
+									printf("Impossibile scrivere nel fb\n\n");
+									free(ffb);
+									free(fb);
+									return -1;
+								}
+						
+							bytes_scritti += bytes_daScrivere;
+							//sovrascrivo
+							f->pos_in_file = bytes_daScrivere;
+
+					}else{	//ricalcolo le dimensioni dei bytes_daScrivere, e riempio il blocco corrente con i dati
+								bytes_daScrivere = bytes_daScrivere - sizeof(fb->data);
+								
+								memcpy(fb->data,data + bytes_scritti,sizeof(fb->data));
+								val = DiskDriver_writeBlock(f->sfs->disk,fb, bloccoCorrente);
+								if(val==-1){
+									printf("Impossibile scrivere nel fb\n\n");
+									free(ffb);
+									free(fb);
+									return -1;
+								}
+								
+							bytes_scritti += sizeof(fb->data);
+							f->pos_in_file = sizeof(fb->data);
+							
+						} 
+						//aggiorno next_block ai blocchi successivi al fb
+						next_block = fb->header.next_block;
+						
+						 
+					}//Altrimenti se non ci sono più blocchi successivi 
+					//ma devo continuare a inserire dati devo trovare un blocco libero del disco ed allocarlo per scrivere i dati 
+					
+						
+					while(bytes_daScrivere>0){
+						
+							FileBlock * fb = malloc(sizeof(FileBlock));
+							bloccoLibero = DiskDriver_getFreeBlock(f->sfs->disk,0);
+							if(bloccoLibero==-1){
+								printf("Non ci sono blocchi liberi,DISCO PIENO\n\n");
+								free(fb);
+								return -1;
+							}
+							
+						//altrimenti ho trovato un blocco libero e setto l'header
+						
+						fb->header.next_block = -1;
+						fb->header.previous_block = bloccoCorrente; //blocco prima che si fermasse il while precedente
+						fb->header.block_in_file = 0; 
+						
+						//se ci entrano tutti li scrivo tutti nel blocco
+						if((sizeof(fb->data) <= bytes_daScrivere)){
+							
+							memcpy(fb->data,data + bytes_scritti,bytes_daScrivere);
+							val = DiskDriver_writeBlock(f->sfs->disk,fb, bloccoLibero);
+							if(val==-1){
+								printf("Impossibile scrivere nel fb\n\n");
+								free(ffb);
+								free(fb);
+								return -1;
+							}
+						
+							bytes_scritti += bytes_daScrivere;
+							f->pos_in_file = bytes_daScrivere;
+
+						}	else{	//ricalcolo le dimensioni dei bytes_daScrivere, e riempio il blocco corrente con i dati
+									bytes_daScrivere = bytes_daScrivere - sizeof(fb->data);
+								
+									memcpy(fb->data,data + bytes_scritti,sizeof(fb->data));
+									val = DiskDriver_writeBlock(f->sfs->disk,fb, bloccoLibero);
+									if(val==-1){
+										printf("Impossibile scrivere nel fb\n\n");
+										free(ffb);
+										free(fb);
+										return -1;
+									}
+								
+								bytes_scritti += sizeof(fb->data);
+								f->pos_in_file = sizeof(fb->data);
+							
+							}	
+					}
+	
+		return bytes_scritti;
+	}
 
 // writes in the file, at current position size bytes stored in data
 // overwriting and allocating new space if necessary
