@@ -51,17 +51,14 @@
 					printf("Errore blocco non valido\n\n ");
 					return -1;
 					}
-					
-				if( bit_num >= 8){
+				
+				if( bit_num >=8){
 					printf("\nErrore bit_num non validi\n\n");
 					return -1;
 					}
 		
-			
-					
 			 bitCercato = ((((entry) * 8))+ bit_num);
 		 
-		
 		    return bitCercato;
 		}
 	
@@ -101,7 +98,7 @@
 	// setta il bit all'indice pos con il bit status (0||1) 
 		int BitMap_set(BitMap* bmap, int pos, int status){
 		//casi limite
-		if(pos>bmap->num_bits || status <0 || status > 1 || pos <0){
+		if(pos > (bmap->num_bits) -1 || status < 0 || status > 1 || pos < 0){
 				return -1;
 		}
 		
@@ -109,7 +106,7 @@
 				int entry = mappa.entry_num;
 				char num = mappa.bit_num;
 				
-				if(status ==1){
+				if(status == 1){
 				 bmap->entries[entry] |= (1<<num); //imposto 1 utilizzando lo shift e l'operatore bit a bit or
 				}else {
 					bmap->entries[entry] &= (~(1<<num));	//imposto 0 utilizzando lo shift e l'operatore bit a bit and
