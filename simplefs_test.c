@@ -114,6 +114,41 @@ int main(int argc, char *argv[]) {
 		printf("Dimensione del file: %d\n", fh2->fcb->fcb.size_in_bytes);
 		printf("Blocco nel disco: %d\n", fh2->fcb->fcb.block_in_disk);
 	
+	//*******************************PROVO LA READ******************************
+		char daLeggere[300]={""};
+		
+		int letti = SimpleFS_read(fh1,&daLeggere,300);
+		if(letti == -1){
+			printf("Impossibile Leggere dal file\n");
+		} else{
+			printf("Ho letto n° bytes %d\n", letti);
+		}
+		printf("Dimensione del file: %d\n", fh1->fcb->fcb.size_in_bytes);
+		printf("Blocco nel disco: %d\n", fh1->fcb->fcb.block_in_disk);
+		
+		for (i = 0; i < 300; i++){
+			printf("%c", daLeggere[i]);
+		}
+		printf("\n\n");
+		//*******************************FINE PROVA DELLA READ******************************
+		
+		//*******************PROVO LA SEEK*************************
+		int bytes_seek = SimpleFS_seek(fh1, 700);
+		if(bytes_seek ==-1){
+		 printf("Errore di seek\n\n");
+		}
+		printf("BYTES_SEEK  %d \n", bytes_seek);
+		int bytes_seek2 = SimpleFS_seek(fh1, 400);
+		if(bytes_seek2 ==-1){
+		 printf("Errore di seek\n\n");
+		}
+		printf("BYTES_SEEK2  %d \n", bytes_seek2);
+		
+		int bytes_seek3 = SimpleFS_seek(fh2, 1000);
+		if(bytes_seek3 ==-1){
+		 printf("Errore di seek\n\n");
+		}
+	
 	//LIBERO GLI SPAZI
 	SimpleFS_format(sfs);
 	SimpleFS_close(fh1);
