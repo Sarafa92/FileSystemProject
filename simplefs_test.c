@@ -81,6 +81,39 @@ int main(int argc, char *argv[]) {
 		printf("E' stato aperto il file %p	\n",fh2);
 	}
 	
+	//************************************SCRIVO SUL FILE HANDLE 1************************************************
+		int i;
+		char daScrivere[500]= "L'UNESCO definisce dal 1984 l'analfabetismo funzionale come «la condizione di una persona incapace di comprendere, valutare, usare e farsi coinvolgere da testi scritti per intervenire attivamente nella società, per raggiungere i propri obiettivi e per sviluppare le proprie conoscenze e potenzialità»[2]. Il termine, coniato all'interno di un'indagine sui nuclei familiari svolta dalle Nazioni Unite nel 1984, fu introdotto per sovvenuta esigenza ";
+		
+	
+		int write = SimpleFS_write(fh1, &daScrivere,sizeof(daScrivere));
+		if(write == -1){
+			printf("Impossibile Scrivere su file\n");
+		} else{
+			printf("Ho scritto n° bytes %d\n", write);
+		}
+		printf("Posizione nel file: %d\n", fh1->pos_in_file);
+		printf("Dimensione del file: %d\n", fh1->fcb->fcb.size_in_bytes);
+		
+		
+		
+		//***************************************SCRIVO SUL FILE HANDLE 2**********************************
+		char daScrivere2[1500] ;
+		for (i = 0; i < 1500; i++)
+		{
+			daScrivere2[i]='a';
+		}
+		
+		int write2 = SimpleFS_write(fh2, (char*)daScrivere2,sizeof(daScrivere2));
+		if(write2 == -1){
+			printf("Impossibile Scrivere su file\n");
+		} else{
+			printf("Ho scritto n° bytes %d\n", write2);
+		}
+		printf("Posizione nel file: %d\n", fh2->pos_in_file);
+		printf("Dimensione del file: %d\n", fh2->fcb->fcb.size_in_bytes);
+		printf("Blocco nel disco: %d\n", fh2->fcb->fcb.block_in_disk);
+	
 	//LIBERO GLI SPAZI
 	SimpleFS_format(sfs);
 	SimpleFS_close(fh1);
