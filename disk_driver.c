@@ -65,9 +65,9 @@ void DiskDriver_init(DiskDriver* disk, const char* filename, int num_blocks){
 				printf("Errore apertura file\n");
 				exit(1);
 			}
-			//int seek = lseek(fd,0,SEEK_SET);
-			//printf("lseek %d\n", seek);
-			
+			/*int seek = lseek(fd,0,SEEK_SET);
+			printf("lseek %d\n", seek);
+			*/
 			
 			//mappo l'header + bitmap
 			void* diskH = mmap(0,size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
@@ -194,18 +194,29 @@ int DiskDriver_readBlock(DiskDriver* disk, void* dest, int block_num){
         printf("Blocco libero impossibile leggere\n");
         return -1;
     }
-	
-	// Leggo il blocco block_num e lo inserisco in dest
-	memcpy(dest, disk->bitmap_data  + (block_num * BLOCK_SIZE), BLOCK_SIZE);
 
-	int i;
+	
+	
+	//mi allineo 
+	 int seek = lseek(disk->fd,  ((disk->header->riservati) + block_num)*BLOCK_SIZE , SEEK_SET);
+    if(seek == -1){
+		return -1;
+	}
+	//leggo il blocco a cui mi sono allineata e lo metto in dest
+    int leggi = read(disk->fd, dest, BLOCK_SIZE);
+    if(leggi == -1){
+        printf("Errore nella lettura\n");
+        return -1;
+    }
+    
+	/*int i;
 	for(i = 0; i < bm.num_bits; i++){
 		BitMapEntryKey key = BitMap_blockToIndex(i,&bm);
 		printf("Entry_num : %d\tBit_num : %d\tStato : %d \n\n", key.entry_num, key.bit_num , ((((bm.entries[key.entry_num]) >> (key.bit_num))&1) ));
-	}
+	}*/
 
 
-	printf("************************************READ BLOCK FINE************************************\n");
+	printf("***********************************READ BLOCK FINE********************************\n");
 	
 	return 0;
 
@@ -230,69 +241,82 @@ typedef struct {
 */
 
 int DiskDriver_writeBlock(DiskDriver* disk, void* src, int block_num){
-	printf("************************************WRITE BLOCK************************************\n");
+		printf("************************************WRITE BLOCK************************************\n");
+		
+		//controlli
+		if(disk == NULL){
+			printf("Errore, impossibile scrivere sul blocco poichè il riferimento al DISCO è NULLO\n");
+			return -1;
+		}
+		
+		if( src == NULL){
+			printf("Errore, impossibile scrivere sul blocco poichè il riferimento alla SORGENTE è NULLA\n");
+			return -1;
+		}
+		
+		if( block_num < 0){
+			printf("Errore, impossibile scrivere sul blocco poichè il blocco scelto è INFERIORE al range!\n");
+			return -1;
+		}
+		
+		if( block_num > disk->header->num_blocks - disk->header->riservati -1  ){
+			printf("Errore, impossibile scrivere sul blocco poichè il blocco scelto è SUPERIORE al range!\n");
+			return -1;
+		}
+
+
+		//char* arrayBit = disk->bitmap_data;
+
+		BitMap bm;
+		bm.num_bits=(disk->header->num_blocks)-1;
+		bm.entries = disk->bitmap_data + sizeof(BitMap);
+
+		//trasformo il blocco e devo andare a leggere in due indici di una BitMapEntryKey
+		//individuo cosi il blocco e il bit di block_num
+
+		BitMapEntryKey chiave = BitMap_blockToIndex(block_num, &bm);
+
+			//devo capire se il blocco su cui voglio scrivere è libero oppure no.
+		printf("blockNum = %d\n\n", block_num);
+		if(BitMap_get(&bm, block_num ,0) == block_num){
+		   //decremento i blocchi liberi del disco  
+			disk->header->free_blocks =  (disk->header->free_blocks) - 1;
+		}
+		
+		//mi allineo per andare a scrivere nel blocco
+		int  val = lseek(disk->fd,  ((disk->header->riservati)  + block_num)* BLOCK_SIZE , SEEK_SET);
+		if(val == -1) {
+			return -1;
+		}
 	
-	//controlli
-	if(disk == NULL){
-		printf("Errore, impossibile scrivere sul blocco poichè il riferimento al DISCO è NULLO\n");
-		return -1;
-	}
-	
-	if( src == NULL){
-		printf("Errore, impossibile scrivere sul blocco poichè il riferimento alla SORGENTE è NULLA\n");
-		return -1;
-	}
-	
-	if( block_num < 0){
-		printf("Errore, impossibile scrivere sul blocco poichè il blocco scelto è INFERIORE al range!\n");
-		return -1;
-	}
-	
-	if( block_num > disk->header->num_blocks - disk->header->riservati -1 ){
-		printf("Errore, impossibile scrivere sul blocco poichè il blocco scelto è SUPERIORE al range!\n");
-		return -1;
-	}
+		int  scrivo = write(disk->fd, src, BLOCK_SIZE);
+		if(scrivo == -1){
+			printf("Errore nella scrittura\n");
+			return -1;
+		}
+
+		//quando ho scritto aggiorno la bitmap ad 1 per segnalare che ho il blocco pieno.
+		int ris = BitMap_set(&bm, block_num, 1);
+		if(ris != 0){
+			printf("Errore della Bitmap_set\n");
+			return -1;
+		}
+
+		
+
+		printf("Chiave.entry_num   %d\n\n", chiave.entry_num);
+		printf("Chiave.bit_num    %d\n\n",chiave.bit_num);
 
 
-	//char* arrayBit = disk->bitmap_data;
-
-	BitMap bm;
-	bm.num_bits=(disk->header->num_blocks)-1;
-	bm.entries = disk->bitmap_data + sizeof(BitMap);
-
-	//trasformo il blocco e devo andare a leggere in due indici di una BitMapEntryKey
-	//individuo cosi il blocco e il bit di block_num
-
-	BitMapEntryKey chiave = BitMap_blockToIndex(block_num, &bm);
-
-		//devo capire se il blocco su cui voglio scrivere è libero oppure no.
-	printf("blockNum = %d\n\n", block_num);
-    	if(BitMap_get(&bm, block_num ,0) == block_num){
-      	//decremento i blocchi liberi del disco
-		disk->header->free_blocks -= 1;
-        }
-	
-	memcpy(  disk->bitmap_data  + (block_num * BLOCK_SIZE),src, BLOCK_SIZE);
-
-
-	//quando ho scritto aggiorno la bitmap ad 1 per segnalare che ho il blocco pieno.
-	int ris = BitMap_set(&bm, block_num, 1);
-	if(ris != 0){
-	    printf("Errore della Bitmap_set\n");
-	    return -1;
-	}
-	
-	printf("Chiave.entry_num   %d\n\n", chiave.entry_num);
-	printf("Chiave.bit_num    %d\n\n",chiave.bit_num);
-
-	int i;
-	for(i = 0; i < bm.num_bits; i++){
-	    BitMapEntryKey key = BitMap_blockToIndex(i,&bm);
-	    printf("Entry_num : %d\tBit_num : %d\tStato : %d \n", key.entry_num, key.bit_num , ((((bm.entries[key.entry_num]) >> (key.bit_num))&1) ));
-	    printf("\n");
-	}
-	printf("************************************WRITE BLOCK FINE************************************\n");
-	return 0;
+		int i;
+		for(i = 0; i < bm.num_bits; i++){
+			BitMapEntryKey key = BitMap_blockToIndex(i,&bm);
+			printf("Entry_num : %d\tBit_num : %d\tStato : %d \n", key.entry_num, key.bit_num , ((((bm.entries[key.entry_num]) >> (key.bit_num))&1) ));
+			printf("\n");
+		}
+		
+		printf("************************************WRITE BLOCK FINE************************************\n");
+		return 0;
 }
 //----------------------------------FREE BLOCK---------------------------------------
 // frees a block in position block_num, and alters the bitmap accordingly
@@ -324,7 +348,8 @@ int DiskDriver_freeBlock(DiskDriver* disk, int block_num){
 		printf("Blocco già libero\n ");
 		return -1;
 	}
-	
+
+
         //scrivo tutti 0 nel blocco che vado a liberare
             char* src = (char*)malloc(sizeof(char)*BLOCK_SIZE);
             int i;
@@ -332,8 +357,17 @@ int DiskDriver_freeBlock(DiskDriver* disk, int block_num){
                 src[i] =0;
             }
 	    
-	 memcpy(  disk->bitmap_data  + (block_num * BLOCK_SIZE),src, BLOCK_SIZE);
-
+	    //memcpy(  disk->bitmap_data  + (block_num * BLOCK_SIZE),src, BLOCK_SIZE);
+	//mi allineo per andare a scrivere nel blocco
+		int  val = lseek(disk->fd,  ((disk->header->riservati)  + block_num)* BLOCK_SIZE , SEEK_SET);
+		if(val == -1) {
+			return -1;
+		}
+		int  scrivo = write(disk->fd, src, BLOCK_SIZE);
+		if(scrivo == -1){
+			printf("Errore nella scrittura\n");
+			return -1;
+		}
 
 	//quando ho liberato il blocco aggiorno la bitmap a 0 per segnalare che ho il blocco vuoto.
 	int ris = BitMap_set(&bm, block_num , 0);
@@ -370,7 +404,10 @@ int DiskDriver_freeBlock(DiskDriver* disk, int block_num){
 int DiskDriver_getFreeBlock(DiskDriver* disk, int start){
     printf("************************************GET FREE BLOCK************************************\n\n");
 	int bloccoLibero;
-	if(disk == NULL || start < 0 || start > disk->header->num_blocks - disk->header->riservati){
+	printf(" disk->header->riservati %d\n",  disk->header->riservati);
+	printf("disk->header->num_blocks %d\n",disk->header->num_blocks);
+	
+	if(disk == NULL || start < 0 || start > disk->header->num_blocks - disk->header->riservati ){
 			printf("Impossibile ritornare il primo blocco libero, poichè i parametri non sono corretti");
 			exit(1);
 		}
@@ -416,4 +453,6 @@ int DiskDriver_flush(DiskDriver* disk){
         printf("************************************FLUSH FINE************************************\n\n");
 		return 0;
 	}
+
+
 
