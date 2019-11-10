@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
 
 		//Prendo in input il numero blocchi del disco che voglio inserire
 		int num_blocchi_disco;
-		printf("\n\nInserire numero di blocchi che si vogliono allocare per il DiskDriver \nLA DIMENSIONE DEVE ESSERE MAGGIORE DI 10  : ");
+		printf("\n\nInserire numero di blocchi che si vogliono allocare per il DiskDriver \nLA DIMENSIONE DEVE ESSERE MAGGIORE DI 12  : ");
 		scanf("%d", &num_blocchi_disco);
 		fflush(stdin);
 		
@@ -30,33 +30,42 @@ int main(int argc, char *argv[]) {
 		//Inizializzo il disco 
 		DiskDriver_init(disco, filename, num_blocchi_disco);
 		sfs->disk = disco;
-		//SimpleFS_format(sfs);
+		
 	
 		//Inizializzo il fileSystem
 		DirectoryHandle* d = SimpleFS_init(sfs,sfs->disk);
 		 
 		printf("DirectoryHandle %p\n\n", d);
 		
-			//***************************CREAZIONE NUOVO FILE*******************************************
+		//***************************CREAZIONE NUOVO FILE*******************************************
 		
 		char* file1 = (char*)"file1";
 		char* file2 = (char*)"file2";
 		char* file3 = (char*)"file1";
+		
 		//CREO FILE 1
 		printf("CREO FILE 1\n\n");
 		FileHandle* fh1  = SimpleFS_createFile(d,file1);
+		printf("Fh1 %p  \n",fh1);
+		SimpleFS_close(fh1);
+		
 		//CREO FILE 2
 		printf("CREO FILE 2\n\n");
 		FileHandle* fh2 = SimpleFS_createFile(d,file2);
+		printf("Fh2 %p  \n",fh2);
+		SimpleFS_close(fh2);
+		
 		//CRERO FILE 3
 		printf("CREO FILE 3\n\n");
 		FileHandle* fh3 = SimpleFS_createFile(d,file3);
+		printf("Fh3 %p  \n",fh3);
+		SimpleFS_close(fh3);
 		
 		
 		
-		printf("Fh1 %p  \n",fh1);
-		printf("Fh2 %p  \n",fh2);
-		printf("Fh3 %p  \n",fh3);	
+	
+		
+			
 
 		//LEGGO DIRECTORIES
 		char* nomiFile =(char*) "";
@@ -72,13 +81,13 @@ int main(int argc, char *argv[]) {
 		printf("Nomi dei file:  %s	\n\n\n",nomiFile);
 	
 	
-		free(fh1);	
+		//free(fh1);	
 		//*********************************APRO IL FILE 1****************************************
 		fh1 = SimpleFS_openFile(d,  file1);
 		if(fh1!=NULL){
 			printf("E' stato aperto il file con nome:  %s	\n\n\n",fh1->fcb->fcb.name);
 		}
-		free(fh2);
+		//free(fh2);
 		//*******************************APRO IL FILE 2******************************************
 		fh2 = SimpleFS_openFile(d,  file2);
 		if(fh2!=NULL){
@@ -139,7 +148,7 @@ int main(int argc, char *argv[]) {
 		printf("\n\n");
 		//*******************************FINE PROVA DELLA READ******************************
 		
-			//*******************PROVO LA SEEK*************************
+		//*******************PROVO LA SEEK*************************
 		int bytes_seek = SimpleFS_seek(fh1, 700);
 		if(bytes_seek ==-1){
 		 printf("Errore di seek\n\n");
@@ -192,7 +201,7 @@ int main(int argc, char *argv[]) {
 		
 		//*********************PROVO REMOVE******************************************	
 		
-    
+		
 		int rimuovi = SimpleFS_remove(d, directoryname);
 		if(rimuovi == -1){
 			printf("Errore Rimozione\n");
@@ -203,8 +212,8 @@ int main(int argc, char *argv[]) {
 		printf("Creo un file nella directory 'Directory1'\n");
 		
 		char* file6 = (char*)"file1";
-		FileHandle* fh6 = SimpleFS_createFile(d,file6);
-		fh6 = SimpleFS_createFile(d, file6);
+
+		FileHandle* fh6 = SimpleFS_createFile(d, file6);
     
 		printf("%p\n\n", fh6);
 
@@ -218,22 +227,17 @@ int main(int argc, char *argv[]) {
 			printf("Mi sono spostata in : %s\n", d->dcb->fcb.name);
 		}
  
-		
-		
 		//PROVO FORMATTAZIONEEEE
 		SimpleFS_format(sfs);
-
-
-		//LIBERO GLI SPAZI
 		
+		//LIBERO GLI SPAZI
 		free(fh1->fcb);
 		free(fh2->fcb);
 		
+		
 		SimpleFS_close(fh1);
 		SimpleFS_close(fh2);
-		SimpleFS_close(fh3);
-			
-		
+		SimpleFS_close(fh6);
 		free(nomiFile);
 		free(d->dcb);
 		free(d);

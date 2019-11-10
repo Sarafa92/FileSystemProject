@@ -196,7 +196,6 @@ int DiskDriver_readBlock(DiskDriver* disk, void* dest, int block_num){
     }
 
 	
-	
 	//mi allineo 
 	 int seek = lseek(disk->fd,  ((disk->header->riservati) + block_num)*BLOCK_SIZE , SEEK_SET);
     if(seek == -1){
@@ -276,15 +275,15 @@ int DiskDriver_writeBlock(DiskDriver* disk, void* src, int block_num){
 
 		BitMapEntryKey chiave = BitMap_blockToIndex(block_num, &bm);
 
-			//devo capire se il blocco su cui voglio scrivere è libero oppure no.
+		//devo capire se il blocco su cui voglio scrivere è libero oppure no.
 		printf("blockNum = %d\n\n", block_num);
 		if(BitMap_get(&bm, block_num ,0) == block_num){
 		   //decremento i blocchi liberi del disco  
-			disk->header->free_blocks =  (disk->header->free_blocks) - 1;
+		   disk->header->free_blocks = (disk->header->free_blocks) - 1;
 		}
 		
 		//mi allineo per andare a scrivere nel blocco
-		int  val = lseek(disk->fd,  ((disk->header->riservati)  + block_num)* BLOCK_SIZE , SEEK_SET);
+		int  val = lseek(disk->fd, ((disk->header->riservati)  + block_num)* BLOCK_SIZE , SEEK_SET);
 		if(val == -1) {
 			return -1;
 		}
@@ -453,6 +452,11 @@ int DiskDriver_flush(DiskDriver* disk){
         printf("************************************FLUSH FINE************************************\n\n");
 		return 0;
 	}
+
+
+
+
+
 
 
 

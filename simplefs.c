@@ -61,7 +61,7 @@ printf("SONO QUI  5\n\n");
 		fdb->fcb.is_dir = 1;//directory
 
 		fdb->num_entries = 0;
-printf("SONO QUI  6\n\n");
+		printf("SONO QUI  6\n\n");
         //imposto i blocchi del file della dimensione fdb->file_blocks a zero , la dimensione è BLOCK_SIZE -sizeof(BlockHeader) - sizeof(FileControlBlock) - sizeof(int)/sizeof(int)
         memset(fdb->file_blocks,0,(int)sizeof(fdb->file_blocks));
 	
@@ -351,7 +351,7 @@ FileHandle* SimpleFS_createFile(DirectoryHandle* d, const char* filename){
 			fh->pos_in_file=0;
 		free(db);
 		free(ffb);
-		free(fh);
+		//free(fh);
 		printf("***************************FINE CREAZIONE FILE**********************\n\n\n\n");
 
 		return fh;
@@ -491,9 +491,11 @@ int SimpleFS_readDir(char** names, DirectoryHandle* d){
 					free(firstFileBlock);
 					return -1;
 				}
-				strncat((*names)+ strlen(*names), firstFileBlock->fcb.name, strlen(firstFileBlock->fcb.name));
+				
+				strncat((*names)+ strlen(*names), firstFileBlock->fcb.name , strlen(firstFileBlock->fcb.name));
 				strncat((*names), " " ,sizeof(char));
 			}
+			 
 			next_block= db->header.next_block;
 		}
 		
@@ -523,7 +525,7 @@ FileHandle* SimpleFS_openFile(DirectoryHandle* d, const char* filename){
 		
 		//creo filehandle da ritornare come puntatore al file che apro
 		FileHandle* fh = (FileHandle*) malloc(sizeof(FileHandle));
-		fh->sfs = d->sfs;
+		
 		
 		
 		//scorro il fileblocks 
@@ -537,14 +539,14 @@ FileHandle* SimpleFS_openFile(DirectoryHandle* d, const char* filename){
 			}
 				
 		//se il nome è lo stesso ed è un file allora popolo il fileheader
-			if(strcmp(ffb->fcb.name, filename) == 0 && ffb->fcb.is_dir == 0){
+			if(strcmp(ffb->fcb.name, filename) == 0 ){
 				//popolo fileHeader
 				fh->sfs = d->sfs;
 				fh->fcb = ffb;
 				fh->directory = d->dcb;
 				fh->current_block = &(ffb->header);
 				fh->pos_in_file = 0;
-				//free(ffb);
+				
 				// Restituisco il file handle
 				return fh;
 			}
@@ -586,9 +588,10 @@ FileHandle* SimpleFS_openFile(DirectoryHandle* d, const char* filename){
 					return fh;
 				}
 			}
+			next_block = db->header.next_block;
 		}	
 		printf("*******************************FINE OPEN_FILE************************************\n\n");
-		free(fh);
+		//free(fh);
 		free(ffb);
 		//se non lo trovo, allora ritorna riferimento nullo
 		printf("File da aprire non trovato\n\n");
@@ -1110,12 +1113,12 @@ int SimpleFS_changeDir(DirectoryHandle* d, char* dirname){
 			printf("Impossibile cambiare directory, riferimento a nome directory NULLO\n");
 			return -1;
 		}
-		FirstDirectoryBlock* fdb = (FirstDirectoryBlock*)malloc(sizeof(FirstDirectoryBlock));
+		
 		
 		//Controllo se dirname = ".."   È IL CASO IN CUI VOGLIO TORNARE INDIETRO DI UNA DIRECTORY  
 		if(strncmp("..", dirname, strlen(dirname)) == 0){
 			//se directory è null significa che sono la root, non posso andare indietro 
-			if(strcmp(d->dcb->fcb.name, "/")==0){
+			if(d->directory==NULL){
 				printf("Sono la root, non ho genitore\n");
 				return -1;
 			}
@@ -1128,7 +1131,6 @@ int SimpleFS_changeDir(DirectoryHandle* d, char* dirname){
 			if(val == -1){
 				printf("Errore nella lettura\n");
 				free(precedente);
-				free(fdb);
 				return -1;
 			}
 			
@@ -1140,11 +1142,12 @@ int SimpleFS_changeDir(DirectoryHandle* d, char* dirname){
 			d->pos_in_block = d->dcb->fcb.block_in_disk;
 			d->directory = precedente;
 			free(precedente);
+			
 			return 0;
 			
 		}else{ //ALTRIMENTI CASO IN CUI VOGLIO ENTRARE IN UNA DETERMINATA DIRECTORY
 			
-			
+			FirstDirectoryBlock* fdb = (FirstDirectoryBlock*)malloc(sizeof(FirstDirectoryBlock));
 			//controllo primo blocco directory range (0-num_entries e inferiore allo spazio disponibile a contenere i file)
 			int i;
 			for (i = 0; (i < (int)sizeof(d->dcb->file_blocks)) && (d->dcb->file_blocks[i] > 0) ; i++){
@@ -1166,7 +1169,7 @@ int SimpleFS_changeDir(DirectoryHandle* d, char* dirname){
 					d->pos_in_block = 0;
 					d->directory = d->dcb;
 					d->dcb = fdb;
-					
+					//free(fdb);
 					return 0;
 				}
 			}
@@ -1200,17 +1203,17 @@ int SimpleFS_changeDir(DirectoryHandle* d, char* dirname){
 						d->pos_in_block = 0;
 						d->directory = d->dcb;
 						d->dcb = fdb;
-						
+						//free(fdb);
 						return 0;
 					}
 						
 				}
 				next_block = db->header.next_block;		
 			}	
-			//free(fdb);
+			
 		}	
-			free(fdb);
-			return -1;
+		
+		return -1;
 
 }
 
@@ -1409,6 +1412,7 @@ int SimpleFS_remove(DirectoryHandle* d, char* filename){
 			int val = DiskDriver_readBlock(d->sfs->disk, &ffb, d->dcb->file_blocks[i]);	
 			if(val == -1){
 				printf("Impossibile leggere blocco per verificare se esiste un file con lo stesso nome\n");
+				free(db2);
 				return -1;
 			}
 			if(strncmp(ffb.fcb.name,filename,strlen(filename))==0){
@@ -1461,7 +1465,6 @@ int SimpleFS_remove(DirectoryHandle* d, char* filename){
 		int bloccoDaLeggere;
 		if(verificaffb==-1){
 			free(db);
-			free(db2);
 			printf("Errore, file non trovato\n");
 			return -1;
 		}
@@ -1506,8 +1509,8 @@ int SimpleFS_remove(DirectoryHandle* d, char* filename){
 						printf("Impossibile liberare blocco\n\n");
 						return -1;
 						free(ffb3);
-						free(db);
 						free(db2);
+						free(db);
 					}
 					//assegno al next block il successivo
 				next_block = ffb3->header.next_block;
@@ -1533,7 +1536,6 @@ int SimpleFS_remove(DirectoryHandle* d, char* filename){
 			if(val == -1){
 				free(firstdb);
 				free(db2);
-				free(db);
 				return -1;
 			}
 
@@ -1543,8 +1545,6 @@ int SimpleFS_remove(DirectoryHandle* d, char* filename){
 				if(val == -1){
 					printf("Cambio directory fallito\n");
 					free(firstdb);
-					free(db2);
-					free(db);
 					return -1;
 				}
 
@@ -1553,8 +1553,6 @@ int SimpleFS_remove(DirectoryHandle* d, char* filename){
 						 if(val == -1){
 							 printf("Errore\n");
 							 free(firstdb);
-							 free(db2);
-							 free(db);
 							 return -1;
 						}
 						SimpleFS_remove(d, ffb2.fcb.name);
@@ -1570,7 +1568,6 @@ int SimpleFS_remove(DirectoryHandle* d, char* filename){
 						printf("Impossibile leggere blocco\n");
 						free(firstdb);
 						free(db2);
-						free(db);
 						return -1;
 					}
 	
@@ -1580,7 +1577,6 @@ int SimpleFS_remove(DirectoryHandle* d, char* filename){
 							printf("Errore\n");
 							free(db2);
 							free(firstdb);
-							free(db);
 							return -1;
 						}
 						SimpleFS_remove(d, ffb2.fcb.name);
@@ -1600,14 +1596,12 @@ int SimpleFS_remove(DirectoryHandle* d, char* filename){
 				val = DiskDriver_freeBlock(d->sfs->disk, bloccoDaLeggere);
 				if(val == -1){
 					free(firstdb);
-					free(db2);
-					free(db);
 					printf("Errore nella liberazione del blocco\n");
 					return -1;
 				}
-				//free(firstdb);
-				//free(db);
-				//free(db2);
+				free(firstdb);
+				free(db);
+				free(db2);
 			}
 
 			else{//alrimenti libero solo la directory
@@ -1615,30 +1609,27 @@ int SimpleFS_remove(DirectoryHandle* d, char* filename){
 				val = DiskDriver_freeBlock(d->sfs->disk, bloccoDaLeggere);
 				if(val==-1){
 					printf("Errore nella liberazione del blocco\n\n");
-					free(db2);
-					free(db);
-					free(firstdb);
 				}
 				
 			}
-			free(firstdb);
+		free(firstdb);	
 		}
 		
     if(verificaffb == 0){
-		db2->file_blocks[indiceffb] = -1;
+		db2->file_blocks[indiceffb] = 0;
 		d->dcb->num_entries-=1;
 		val= DiskDriver_freeBlock(d->sfs->disk, current_block);
         if(val == -1){
             free(db);
             free(db2);
-            printf("Impossibile liberare blocco\n");
+            printf("Errore nella liberazione del blocco\n");
             return -1;
         }
 		val = DiskDriver_writeBlock(d->sfs->disk, db2, current_block);
         if(val == -1){
             free(db);
             free(db2);
-            printf("Impossibile scrivere sul blocco\n");
+            printf("Errore nella scrittura del blocco\n");
             return -1;
         }
 
@@ -1646,27 +1637,27 @@ int SimpleFS_remove(DirectoryHandle* d, char* filename){
         if(val == -1){
             free(db);
             free(db2);
-            printf("Impossibile liberare blocco\n");
+            printf("Errore nella liberazione del blocco\n");
             return -1;
         }
 		val = DiskDriver_writeBlock(d->sfs->disk, d->dcb, d->dcb->fcb.block_in_disk);
         if(val == -1){
             free(db);
             free(db2);
-            printf("Impossibile scrivere sul blocco\n");
+            printf("Errore nella scrittura del blocco\n");
             return -1;
         }
         return 0;
 
     } else {
-        d->dcb->file_blocks[indiceffb] = -1;
+        d->dcb->file_blocks[indiceffb] = 0;
         d->dcb->num_entries-=1;
 
         val = DiskDriver_freeBlock(d->sfs->disk, d->dcb->fcb.block_in_disk);
         if(val == -1){
             free(db);
             free(db2);
-            printf("Impossibile liberare blocco\n");
+            printf("Errore nella liberazione del blocco\n");
             return -1;
         }
 
@@ -1674,10 +1665,9 @@ int SimpleFS_remove(DirectoryHandle* d, char* filename){
         if(val == -1){
             free(db);
             free(db2);
-            printf("Impossibile scrivere sul blocco\n");
+            printf("Errore nella scrittura del blocco\n");
             return -1;
-        }
-        free(db);
+        }free(db);
         free(db2);
         return 0;
     }

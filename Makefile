@@ -1,6 +1,6 @@
 CCOPTS= -Wall -g -std=gnu99 -Wstrict-prototypes
 LIBS=
-CC=gcc
+CC=g++
 AR=ar
 
 

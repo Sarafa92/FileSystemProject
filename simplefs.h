@@ -21,6 +21,7 @@ typedef struct {
   int  size_in_bytes;
   int size_in_blocks;
   int is_dir;          // 0 for file, 1 for dir
+  int written_bytes;
 } FileControlBlock;
 
 // this is the first physical block of a file
