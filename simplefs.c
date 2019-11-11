@@ -30,7 +30,7 @@ DirectoryHandle* SimpleFS_init(SimpleFS* fs, DiskDriver* disk){
 			printf("SONO QUI3\n\n");
 
 		  //top level directory
-		FirstDirectoryBlock* fdb = (FirstDirectoryBlock*)malloc(sizeof(FirstDirectoryBlock));
+		FirstDirectoryBlock* fdb = (FirstDirectoryBlock*)calloc(1, sizeof(FirstDirectoryBlock));;
 		printf("SONO QUI  4\n\n");
 
         //printf("blocchi riservati: %d\n\n",fs->disk->header->riservati);
@@ -129,7 +129,7 @@ void SimpleFS_format(SimpleFS* fs){
 		printf("Entry_num : %d\tBit_num : %d\tStato : %d \n\n", key.entry_num, key.bit_num , ((((bm.entries[key.entry_num]) >> (key.bit_num))&1) ));}
 
         //top level directory
-	FirstDirectoryBlock* fdb = (FirstDirectoryBlock*)malloc(sizeof(FirstDirectoryBlock));
+	FirstDirectoryBlock* fdb = (FirstDirectoryBlock*)calloc(1, sizeof(FirstDirectoryBlock));;
 
         printf("blocchi riservati: %d\n\n",fs->disk->header->riservati);
 
@@ -137,11 +137,7 @@ void SimpleFS_format(SimpleFS* fs){
         //che sarà il blocco riservato al fcb
         int firstFreeBlock = DiskDriver_getFreeBlock(fs->disk,0);
 
-       /* //dimensione fcb in blocchi del disco
-        int dimFcb =fdb->fcb.size_in_bytes % BLOCK_SIZE;
-            if((( dimFcb)%BLOCK_SIZE)!=0){
-            dimFcb +=1;
-           } */
+       
 		
 		//POPOLO IL FIRST DIRECTORY BLOCK
 
@@ -161,11 +157,9 @@ void SimpleFS_format(SimpleFS* fs){
 		fdb->num_entries = 0;
 
         //imposto i blocchi del file della dimensione fdb->file_blocks a zero , la dimensione è BLOCK_SIZE -sizeof(BlockHeader) - sizeof(FileControlBlock) - sizeof(int)/sizeof(int)
-        memset(fdb->file_blocks,0,sizeof(fdb->file_blocks));
+        memset(fdb->file_blocks,'0',sizeof(fdb->file_blocks));
 
-	 /*  for(i = 0; i < (int)sizeof(fdb->file_blocks); i++){
-        fdb->file_blocks[i] = 0;
-    }*/
+
 
         //scrivo sulla prima directory(root)
         printf("Scrivo il first directory block nel primo blocco libero\n\n");
@@ -174,7 +168,7 @@ void SimpleFS_format(SimpleFS* fs){
 			printf("Errore nella scrittura del primo blocco (FirstDirectoryBlock)\n\n");
 			free(fdb);
 			return;
-			}
+		}
 			
         DiskDriver_flush(fs->disk);
 
@@ -232,7 +226,7 @@ FileHandle* SimpleFS_createFile(DirectoryHandle* d, const char* filename){
 
 
 		//creo FileHandle e FirstFileBlock
-		FirstFileBlock* ffb =(FirstFileBlock*)malloc(sizeof(FirstFileBlock));
+		FirstFileBlock* ffb =(FirstFileBlock*)calloc(1, sizeof(FirstFileBlock));
 		//header default
 		ffb->header.block_in_file = 0;
 		ffb->header.next_block= -1;
@@ -783,7 +777,7 @@ int SimpleFS_write(FileHandle* f, void* data, int size){
 				
 				//Altrimenti se non ci sono più blocchi successivi 
 				if(bytes_daScrivere > 0){	//--------------------------------------------SE CI STA ANCORA ROBA DA SCRIVERE MA NON CI SONO BLOCCHI
-				FileBlock * fb2 = (FileBlock*)malloc(sizeof(FileBlock));
+				FileBlock * fb2 = (FileBlock*)calloc(1, sizeof(FileBlock));;
 						fb2->header.next_block = -1;
 						fb2->header.previous_block = bloccoCorrente; //blocco prima
 						fb2->header.block_in_file =  f->fcb->header.block_in_file+1 ;
@@ -1147,7 +1141,7 @@ int SimpleFS_changeDir(DirectoryHandle* d, char* dirname){
 			
 		}else{ //ALTRIMENTI CASO IN CUI VOGLIO ENTRARE IN UNA DETERMINATA DIRECTORY
 			
-			FirstDirectoryBlock* fdb = (FirstDirectoryBlock*)malloc(sizeof(FirstDirectoryBlock));
+			FirstDirectoryBlock* fdb = (FirstDirectoryBlock*)calloc(1, sizeof(FirstFileBlock));
 			//controllo primo blocco directory range (0-num_entries e inferiore allo spazio disponibile a contenere i file)
 			int i;
 			for (i = 0; (i < (int)sizeof(d->dcb->file_blocks)) && (d->dcb->file_blocks[i] > 0) ; i++){
@@ -1156,14 +1150,14 @@ int SimpleFS_changeDir(DirectoryHandle* d, char* dirname){
 				if(val == -1){
 					printf("Impossibile leggere blocco per verificare se esiste un file con lo stesso nome\n");
 					free(fdb);
-					exit(1);
+					return -1;
 				}
 				if(strncmp(fdb->fcb.name,dirname,strlen(dirname))==0 && fdb->fcb.is_dir == 1){
 					val = DiskDriver_readBlock(d->sfs->disk, fdb,d->dcb->file_blocks[i]);	
 					if(val == -1){
 						printf("Impossibile leggere blocco per verificare se esiste un file con lo stesso nome\n");
 						free(fdb);
-						exit(1);
+						return -1;
 					}
 					//se va a buon fine 
 					d->pos_in_block = 0;
@@ -1186,7 +1180,7 @@ int SimpleFS_changeDir(DirectoryHandle* d, char* dirname){
 					printf("Impossibile leggere il blocco\n");
 					free(db);
 					free(fdb);
-					exit(1);
+					return -1;
 				}
 				
 				//lettura andata a buon fine, ora controllo che non ci sia un file con lo stesso nome nell'array di file
@@ -1197,7 +1191,7 @@ int SimpleFS_changeDir(DirectoryHandle* d, char* dirname){
 						printf("Impossibile leggere blocco per verificare se esiste un file con lo stesso nome\n");
 						free(fdb);
 						free(db);
-						exit(1);
+						return -1;
 					}
 					if(strncmp(fdb->fcb.name,dirname,strlen(dirname))==0 && fdb->fcb.is_dir ==1){
 						d->pos_in_block = 0;
@@ -1210,7 +1204,7 @@ int SimpleFS_changeDir(DirectoryHandle* d, char* dirname){
 				}
 				next_block = db->header.next_block;		
 			}	
-			
+			free(fdb);
 		}	
 		
 		return -1;
@@ -1265,7 +1259,7 @@ int SimpleFS_mkDir(DirectoryHandle* d, char* dirname){
 
 
 		//creo FirstDirectoryBlock
-		FirstDirectoryBlock* fdb =(FirstDirectoryBlock*)malloc(sizeof(FirstDirectoryBlock));
+		FirstDirectoryBlock* fdb =(FirstDirectoryBlock*)calloc(1, sizeof(FirstFileBlock));
 		//header default
 		fdb->header.block_in_file = 0;
 		fdb->header.next_block= -1;

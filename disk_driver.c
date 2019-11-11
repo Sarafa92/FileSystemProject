@@ -294,6 +294,7 @@ int DiskDriver_writeBlock(DiskDriver* disk, void* src, int block_num){
 			return -1;
 		}
 
+
 		//quando ho scritto aggiorno la bitmap ad 1 per segnalare che ho il blocco pieno.
 		int ris = BitMap_set(&bm, block_num, 1);
 		if(ris != 0){
